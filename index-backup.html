@@ -15,7 +15,6 @@
 <label>รหัสผ่าน</label><input id="sbPassword" type="password" style="width:100%;padding:10px">
 <button id="loginBtn" type="button" style="padding:12px;margin:10px 0">เข้าสู่ระบบ</button>
 <button id="logoutBtn" type="button" hidden>ออกจากระบบ</button>
-<div id="recoveryBox" hidden style="margin-top:16px;padding:16px;border:2px solid #47764e;border-radius:12px;background:#edf4e9"><h3>ตั้งรหัสผ่านใหม่</h3><label for="newPassword">รหัสผ่านใหม่ (อย่างน้อย 12 ตัวอักษร)</label><input id="newPassword" type="password" autocomplete="new-password" minlength="12" style="width:100%;padding:10px;margin:8px 0"><label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="12" style="width:100%;padding:10px;margin:8px 0"><button id="savePassword" type="button" style="padding:12px">บันทึกรหัสผ่านใหม่</button></div>
 <pre id="sbStatus" style="white-space:pre-wrap">รอเชื่อมต่อ</pre>
 <p>ใส่เฉพาะ Publishable key ห้ามใช้ Secret key หรือ service_role key</p>
 <p><strong>เวอร์ชันทดสอบบน GitHub Pages:</strong> ตรวจสอบการล็อกอินและสิทธิ์อ่านตารางเท่านั้น ข้อมูลบัญชีในหน้าเว็บไซต์ยังเก็บในเครื่องและยังไม่ซิงก์ออนไลน์</p></section><main class="wrap" id="appRoot" hidden>
@@ -62,76 +61,28 @@ $('exportBtn').onclick=()=>{let head=['วันที่','ประเภท',
 render();
 </script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-(()=>{
- const el=id=>document.getElementById(id);
- const url='https://lldnuuxhnpvqepkeomhc.supabase.co';
- const keyName='canePublishableKey';
- let client;
- el('sbKey').value=localStorage.getItem(keyName)||'';
- function status(message){el('sbStatus').textContent=message}
- function recoveryMode(){el('recoveryBox').hidden=false;el('appRoot').hidden=true;el('loginBtn').hidden=true;status('ลิงก์กู้คืนได้รับการยืนยันแล้ว กรุณาตั้งรหัสผ่านใหม่ด้านล่าง')}
- function loginMode(){el('recoveryBox').hidden=true;el('appRoot').hidden=true;el('loginBtn').hidden=false;el('logoutBtn').hidden=true}
- async function verifyTables(user){
-  el('recoveryBox').hidden=true;el('appRoot').hidden=false;el('loginBtn').hidden=true;el('logoutBtn').hidden=false;
-  const checks=[];
-  for(const t of ['plots','transactions','cash_accounts','debts','harvest_records','vehicles']){
-   const {count,error}=await client.from(t).select('*',{head:true,count:'exact'});
-   checks.push(t+': '+(error?'อ่านไม่ได้: '+error.message:'อ่านได้ '+count+' รายการ'));
-  }
-  status('ล็อกอินสำเร็จ: '+user.email+'\n'+checks.join('\n')+'\nรุ่นทดลอง: ยังไม่รองรับการบันทึกบัญชีออนไลน์');
+(()=>{const el=id=>document.getElementById(id);let client;
+el('sbKey').value=localStorage.getItem('canePublishableKey')||'';
+el('loginBtn').onclick=async()=>{
+try{
+ const key=el('sbKey').value.trim();
+ if(!key.startsWith('sb_publishable_'))throw Error('ต้องเป็น Publishable key เท่านั้น');
+ if(!window.supabase)throw Error('โหลด Supabase ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต');
+ client=window.supabase.createClient('https://lldnuuxhnpvqepkeomhc.supabase.co',key);
+ el('sbStatus').textContent='กำลังเข้าสู่ระบบ...';
+ const {data,error}=await client.auth.signInWithPassword({email:el('sbEmail').value.trim(),password:el('sbPassword').value});
+ if(error)throw error;
+ localStorage.setItem('canePublishableKey',key);
+ el('sbPassword').value='';
+ el('appRoot').hidden=false;el('logoutBtn').hidden=false;el('loginBtn').hidden=true;
+ const checks=[];
+ for(const t of ['plots','transactions','cash_accounts','debts','harvest_records','vehicles']){
+  const {count,error:e}=await client.from(t).select('*',{head:true,count:'exact'});
+  checks.push(t+': '+(e?'ตรวจไม่ผ่าน: '+e.message:'อ่านได้ '+count+' รายการ'));
  }
- async function initialize(){
-  const key=el('sbKey').value.trim();
-  if(!key.startsWith('sb_publishable_'))throw Error('กรุณาใส่ Publishable key ที่ขึ้นต้นด้วย sb_publishable_');
-  if(!window.supabase?.createClient)throw Error('ไม่สามารถโหลด Supabase ได้ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
-  if(!client){
-   client=window.supabase.createClient(url,key,{auth:{detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}});
-   client.auth.onAuthStateChange((event)=>{
-    if(event==='PASSWORD_RECOVERY')recoveryMode();
-   });
-  }
-  localStorage.setItem(keyName,key);
-  return client;
- }
- el('loginBtn').onclick=async()=>{
-  try{
-   await initialize();status('กำลังเข้าสู่ระบบ...');
-   const {data,error}=await client.auth.signInWithPassword({email:el('sbEmail').value.trim(),password:el('sbPassword').value});
-   if(error)throw error;
-   el('sbPassword').value='';await verifyTables(data.user);
-  }catch(e){loginMode();status('เกิดข้อผิดพลาด: '+e.message)}
- };
- el('savePassword').onclick=async()=>{
-  try{
-   await initialize();
-   const p=el('newPassword').value;
-   if(p.length<12)throw Error('รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร');
-   if(p!==el('confirmPassword').value)throw Error('รหัสผ่านสองช่องไม่ตรงกัน');
-   const {data:{session},error:sessionError}=await client.auth.getSession();
-   if(sessionError||!session)throw Error('ลิงก์หมดอายุหรือไม่ถูกต้อง กรุณาขออีเมลรีเซ็ตใหม่');
-   const {error}=await client.auth.updateUser({password:p});
-   if(error)throw error;
-   el('newPassword').value='';el('confirmPassword').value='';
-   await client.auth.signOut();loginMode();
-   status('ตั้งรหัสผ่านใหม่สำเร็จแล้ว กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านใหม่');
-   history.replaceState({},document.title,location.pathname);
-  }catch(e){status('ตั้งรหัสผ่านไม่สำเร็จ: '+e.message)}
- };
- el('logoutBtn').onclick=async()=>{if(client)await client.auth.signOut();loginMode();status('ออกจากระบบแล้ว')};
- (async()=>{
-  try{
-   if(!el('sbKey').value.trim()){
-    status('กรุณาใส่ Publishable key ก่อน หากกำลังเปิดลิงก์รีเซ็ต ต้องใช้เบราว์เซอร์เดียวกับที่เคยใส่คีย์ไว้');return;
-   }
-   await initialize();
-   const isRecovery=location.hash.includes('type=recovery')||location.search.includes('type=recovery');
-   const {data,error}=await client.auth.getSession();
-   if(error)throw error;
-   if(isRecovery){
-    if(data.session)recoveryMode();else status('กำลังตรวจสอบลิงก์รีเซ็ตรหัสผ่าน... หากไม่สำเร็จ กรุณาขอลิงก์ใหม่');
-   }else if(data.session){await verifyTables(data.session.user)}
-   else status('พร้อมเข้าสู่ระบบ หรือเปิดลิงก์รีเซ็ตรหัสผ่านจากอีเมล');
-  }catch(e){status('เชื่อมต่อไม่สำเร็จ: '+e.message)}
- })();
+ el('sbStatus').textContent='ล็อกอินสำเร็จ: '+data.user.email+'\n'+checks.join('\n')+'\nยังไม่ทดสอบการเขียนข้อมูล';
+}catch(e){el('sbStatus').textContent='เกิดข้อผิดพลาด: '+e.message}
+};
+el('logoutBtn').onclick=async()=>{if(client)await client.auth.signOut();el('appRoot').hidden=true;el('logoutBtn').hidden=true;el('loginBtn').hidden=false;el('sbStatus').textContent='ออกจากระบบแล้ว'};
 })();
 </script><script>document.querySelectorAll('form').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();e.stopImmediatePropagation();alert('รุ่นทดลอง: ยังไม่เปิดบันทึกข้อมูลจริง');},true));</script></body></html>
