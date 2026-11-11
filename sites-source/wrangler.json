@@ -11,7 +11,7 @@
     {
       "binding": "DB",
       "database_name": "sugarcane-ledger",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "2d68654a-95bd-40a3-ae35-e08c77d8f774",
       "migrations_dir": "drizzle"
     }
   ]
