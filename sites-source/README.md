@@ -43,3 +43,6 @@ node --check dist/server/index.js
 npm run build
 npm test
 ```
+
+
+Build watch path: `sites-source/**` (repository-relative), including the Worker authentication source.
