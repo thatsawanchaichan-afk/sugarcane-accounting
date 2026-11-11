@@ -1,3 +1,37 @@
+// Cloudflare Access JWT verification; no trust in client-supplied identity headers.
+const accessKeys = new Map();
+function decodeJwtPart(part){
+ const raw=atob(part.replace(/-/g,'+').replace(/_/g,'/'));
+ return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
+export async function verifiedOwner(request,env){
+ const team=String(env.ACCESS_TEAM_DOMAIN||'').replace(/\/$/,'');
+ const audience=String(env.ACCESS_AUD||'');
+ const owner=String(env.OWNER_EMAIL||'').trim().toLowerCase();
+ if(!/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(team)||!audience||!owner||owner.includes('example.com'))return {status:503,error:'ตั้งค่า Cloudflare Access และอีเมลเจ้าของก่อนใช้งาน'};
+ const token=request.headers.get('Cf-Access-Jwt-Assertion');
+ if(!token||token.length>32768)return {status:401,error:'กรุณาเข้าสู่ระบบผ่าน Cloudflare Access'};
+ try{
+  const parts=token.split('.');if(parts.length!==3)throw Error('token');
+  const header=JSON.parse(new TextDecoder().decode(decodeJwtPart(parts[0])));
+  if(header.alg!=='RS256'||typeof header.kid!=='string')throw Error('algorithm');
+  let cached=accessKeys.get(team);
+  if(!cached||cached.until<Date.now()||!cached.keys.some(k=>k.kid===header.kid)){
+   const response=await fetch(team+'/cdn-cgi/access/certs',{redirect:'error',signal:AbortSignal.timeout(5000)});
+   if(!response.ok)throw Error('keys');const body=await response.json();
+   if(!Array.isArray(body.keys))throw Error('keys');
+   cached={keys:body.keys,until:Date.now()+300000};accessKeys.set(team,cached);
+  }
+  const jwk=cached.keys.find(k=>k.kid===header.kid&&k.kty==='RSA');if(!jwk)throw Error('key');
+  const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
+  if(!await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,decodeJwtPart(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1])))throw Error('signature');
+  const claims=JSON.parse(new TextDecoder().decode(decodeJwtPart(parts[1]))),now=Math.floor(Date.now()/1000);
+  if(claims.iss!==team||!Array.isArray(claims.aud)||!claims.aud.includes(audience)||!Number.isFinite(claims.exp)||claims.exp<=now||claims.nbf!==undefined&&(!Number.isFinite(claims.nbf)||claims.nbf>now+30)||typeof claims.sub!=='string'||!claims.sub)throw Error('claims');
+  if(typeof claims.email!=='string'||claims.email.trim().toLowerCase()!==owner)return {status:403,error:'บัญชีนี้ไม่มีสิทธิ์ใช้งาน'};
+  // This application is owner-only. Stable ID keeps the ledger independent of IdP changes.
+  return {user:'owner'};
+ }catch{return {status:401,error:'เซสชันไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'};}
+}
 function fiscalYearOf(date){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return '';
  const [year,month,day]=date.split('-').map(Number),check=new Date(Date.UTC(year,month-1,day));
@@ -33,8 +67,9 @@ async function loadLedger(db, user) {
 }
 export default {
   async fetch(request, env) {
-    const user = request.headers.get('oai-authenticated-user-id');
-    if (!user) return respond({ error: 'Sign in required' }, 401);
+    const identity=await verifiedOwner(request,env);
+    if(!identity.user)return respond({error:identity.error},identity.status);
+    const user=identity.user;
     const url = new URL(request.url);
     if (url.pathname === '/' && request.method === 'GET') {
       return new Response(APP_HTML, { headers: {
