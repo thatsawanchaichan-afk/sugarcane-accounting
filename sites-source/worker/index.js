@@ -23,7 +23,7 @@ export async function verifiedOwner(request,env){
    const timer=setTimeout(()=>controller.abort(),15000);
    let body;
    try{
-    const response=await fetch(team+'/cdn-cgi/access/certs',{redirect:'error',signal:controller.signal});
+    const response=await fetch(team+'/cdn-cgi/access/certs',{redirect:'manual',signal:controller.signal});
     stage='keys_http_'+response.status;
     if(!response.ok)throw Error('keys');
     stage='keys_json';body=await response.json();
@@ -46,7 +46,11 @@ export async function verifiedOwner(request,env){
   if(typeof claims.email!=='string'||claims.email.trim().toLowerCase()!==owner)return {status:403,error:'บัญชีนี้ไม่มีสิทธิ์ใช้งาน'};
   // This application is owner-only. Stable ID keeps the ledger independent of IdP changes.
   return {user:'owner'};
- }catch{return {status:401,error:'Access verification failed',code:'ACCESS_'+stage.toUpperCase()};}
+ }catch(error){
+  // The public-key request contains no user token. Report only its exception class.
+  const kind=stage==='keys_fetch'&&['TypeError','AbortError','TimeoutError','NotSupportedError'].includes(error?.name)?'_'+error.name.toUpperCase():'';
+  return {status:401,error:'Access verification failed',code:'ACCESS_'+stage.toUpperCase()+kind};
+ }
 }
 function fiscalYearOf(date){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return '';
