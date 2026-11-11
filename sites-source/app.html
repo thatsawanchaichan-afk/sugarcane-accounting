@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>สมุดบัญชีธุรกิจอ้อย</title>
+<style>
+:root{color-scheme:light;--ink:#172e26;--green:#204d3b;--mint:#e6efe3;--cream:#f7f6f0;--line:#dce4d9;--muted:#52665b;--gold:#f4ca75}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:16px system-ui,sans-serif}button,input,select{font:inherit}button{cursor:pointer}header{background:#123728;color:white}header div,main{max-width:1140px;margin:auto;padding:24px}header div{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}header strong{letter-spacing:.04em}small,.muted{color:var(--muted)}header small{color:#c9dacb}main{padding-top:24px}.hero{border-radius:24px;background:linear-gradient(118deg,#204d3b,#38684a);color:white;padding:32px;position:relative;overflow:hidden}.hero:after{content:'◜';position:absolute;font-size:260px;right:6%;top:-80px;color:#f4ca753b;pointer-events:none}.kicker{color:var(--gold);font-size:.82rem;letter-spacing:.14em}h1{font-size:clamp(28px,5vw,46px);margin:8px 0}h2{margin:0 0 14px}p{line-height:1.55}.hero p{margin:0;color:#e1ecde}.toolbar,nav,.actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:16px 0}.toolbar{justify-content:space-between}.toolbar label{display:flex;gap:8px;align-items:center}button{border:1px solid var(--line);background:white;color:var(--green);padding:9px 14px;border-radius:10px;font-weight:650}button.active,button.primary{background:var(--green);color:white;border-color:var(--green)}button:hover{filter:brightness(.94)}button:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric,.box{border:1px solid var(--line);background:white;border-radius:16px;padding:18px}.metric strong{display:block;font-size:clamp(19px,3vw,28px);margin-top:5px}.box{margin:14px 0}.table{overflow:auto}table{border-collapse:collapse;width:100%;white-space:nowrap}th,td{text-align:left;border-bottom:1px solid var(--line);padding:10px 12px;font-size:.9rem}th{background:#eef3ec}form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}form label{display:grid;gap:5px;font-size:.9rem;font-weight:600}input,select{min-width:0;width:100%;padding:9px;border:1px solid #b9c9bd;border-radius:8px;background:white;color:var(--ink)}.status{font-size:.85rem}.warn{color:#8e3d24}.pill{background:var(--mint);border-radius:99px;padding:5px 10px}.bar{height:6px;background:var(--mint);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--green)}.sub{margin:0 0 12px}.form-actions{grid-column:1/-1;margin:0}.empty{padding:14px;color:var(--muted)}a{color:inherit}@media(max-width:720px){main,header div{padding:14px}.hero{padding:24px}.grid,form{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:400px){form{grid-template-columns:1fr}}
+
+.debt-total{font-size:clamp(1.8rem,5vw,2.8rem);font-weight:800;margin:.35rem 0;color:#173d2c}
+.debt-group>summary{cursor:pointer;font-weight:700}.debt-group>summary:focus-visible{outline:2px solid #27774c;outline-offset:5px}
+.debt-group-heading{display:inline-flex;align-items:baseline;justify-content:space-between;gap:.5rem 1rem;width:calc(100% - 1.5rem);flex-wrap:wrap}
+.debt-group-amount{color:#173d2c;font-size:1.18rem}.debt-group-sub{display:block;font-size:.86rem;font-weight:400;margin:.25rem 0 0 1.25rem}
+.debt-group[open]>summary{margin-bottom:1rem}.debt-group>h3{margin-top:1rem}
+
+[hidden]{display:none!important}
+.account-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}
+.account-choice{min-height:124px;width:100%;text-align:left;padding:24px;border-radius:16px;background:#fff;color:var(--ink);border:1px solid var(--line);font-size:clamp(1.05rem,2vw,1.3rem)}
+.account-choice:hover,.account-choice:focus-visible{border-color:var(--green);background:var(--mint)}
+.account-choice span{float:right;color:var(--green)}
+@media(max-width:550px){.account-choices{grid-template-columns:1fr}.account-choice{min-height:92px}}
+.menu-row{border:1px solid #d6dfd7;border-radius:12px;padding:12px;margin:10px 0}.menu-grip{touch-action:none;cursor:grab}.menu-tree{display:flex;gap:8px;flex-wrap:wrap}.menu-tree details{border:1px solid #d6dfd7;border-radius:12px;padding:10px}.menu-tree summary{cursor:pointer;padding:8px}.menu-tree button{margin:4px}</style>
+<header><div><strong>🌾 สมุดบัญชีธุรกิจอ้อย</strong><small id="status" role="status">กำลังโหลดข้อมูล</small></div></header>
+<main><section class="hero"><div class="kicker">สมุดบัญชีส่วนตัว</div><h1 id="account-title">เลือกบัญชี</h1></section>
+<div class="toolbar" id="account-controls" hidden><button type="button" data-account="">กลับหน้าเลือกบัญชี</button><label><span id="period-label">ปีงบ</span> <select id="season"></select></label><span class="muted" id="period"></span></div>
+<section id="record-search" class="box" hidden><form data-form="record-search"><label class="form-actions">ค้นหารายการ<input id="search-query" name="query" type="search" placeholder="ชื่อคนงาน ลูกไร่ เลขตั๋ว รถ วันที่ หรือยอดเงิน"></label><div class="actions form-actions"><button class="primary" type="submit">ค้นหา</button><button type="button" data-clear-search>ล้างคำค้น</button></div></form><p class="muted sub">ค้นหาในบัญชีนี้ ตามปีที่เลือก รวมทะเบียนแปลง รถ อัตรา และหนี้ที่ไม่แยกปี · วันที่ค้นได้ทั้ง พ.ศ. และ ค.ศ.</p><div id="search-results" aria-live="polite"></div></section><nav id="tabs" aria-label="เมนูบัญชี" hidden></nav><div id="screen"></div></main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const num=value=>Number(value)||0;
+const fmt=value=>num(value).toLocaleString('th-TH',{maximumFractionDigits:2});
+const money=value=>fmt(value)+' บ.';
+const cents=value=>Math.round(num(value)*100)/100;
+const dateFormat=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'});
+function today(){
+ const parts=Object.fromEntries(dateFormat.formatToParts(new Date()).map(part=>[part.type,part.value]));
+ return [parts.year,parts.month,parts.day].join('-');
+}
+function fiscalYearOf(date){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return '';
+ const [year,month,day]=date.split('-').map(Number),check=new Date(Date.UTC(year,month-1,day));
+ if(check.getUTCFullYear()!==year||check.getUTCMonth()!==month-1||check.getUTCDate()!==day)return '';
+ return String(year+543-(month<10?1:0));
+}
+function migrateFiscal(data){
+ if(data.fiscalVersion===1)return false;
+ for(const key of ['ledger','work','quota','household'])for(const row of data[key]||[]){
+  row.originalSeason??=row.season??'';
+  const year=fiscalYearOf(row.date);row.season=year;row.fiscalNeedsReview=!year;
+ }
+ data.previousSeasonLocks??=structuredClone(data.closed||{});
+ data.closed={};data.fiscalVersion=1;return true;
+}
+const now=new Date(today()+'T12:00:00');
+const defaultSeason=now.getFullYear()+543-(now.getMonth()<9?1:0);
+const householdYear=defaultSeason;
+const accountTitles={cane:'บัญชีไร่อ้อย',household:'บัญชีรายรับรายจ่ายในครัวเรือน'};
+const householdTabs={householdHome:'ภาพรวม',household:'รายรับ–รายจ่าย'};
+const plannedSeasons=['2568','2569','2570','2571','2572'];
+const labels={home:'ภาพรวม',ledger:'รายรับ–รายจ่าย',plots:'แปลงอ้อย',work:'ค่าแรง',quotas:'ทะเบียนและสรุปโควต้า',quota:'ตั๋วชั่งและเจ้าของอ้อย',debts:'หนี้และเงินค้าง',assets:'รถ',rates:'อัตราค่าแรงและค่าบริการ',history:'ต้นทุนย้อนหลัง',backup:'สำรองข้อมูล'};
+const plotAccounts=[['mother','ไร่ของแม่'],['tad','ไร่ของทัด'],['','ยังไม่ระบุกลุ่ม']];
+const tadPlot={id:'plot-tad-5-rai',account:'tad',name:'แปลงตัวอย่าง',area:0,rent:'',note:''};
+const base={plots:[],ledger:[],household:[],work:[],quota:[],debts:[],assets:[],
+rates:[
+{id:'r1',name:'ตัดอ้อยสด',kind:'ค่าแรง',unit:'วา',rate:13},{id:'r2',name:'ตัดอ้อยไฟไหม้',kind:'ค่าแรง',unit:'วา',rate:7},{id:'r3',name:'คนคีบอ้อย',kind:'ค่าแรง',unit:'ตัน',rate:12},{id:'r4',name:'คนขับรถส่งอ้อย',kind:'ค่าแรง',unit:'เที่ยว',rate:600},{id:'r5',name:'คนงานขึ้นอ้อย',kind:'ค่าแรง',unit:'ตัน',rate:20},{id:'r6',name:'คนเก็บอ้อย',kind:'ค่าแรง',unit:'ตัน',rate:7},{id:'r7',name:'บริการรถคีบ',kind:'รายรับ',unit:'ตัน',rate:120},{id:'r8',name:'บริการรถหกล้อ',kind:'รายรับ',unit:'ตัน',rate:230}],
+closed:{}};
+let recordSearch='';
+const overviewYears={cane:'',household:''};
+let db,version=0,account='',tab='home',edit=null,saving=false,local=false;
+const selectedYears={cane:'',household:''};
+let activeVehicle='', vehicleEntryKind='';
+let debtPaymentId='', debtReferenceIndex=null, addingDebt=false, debtAllocationIndex=null, debtEditPaymentIndex=null;
+let openDebtGroups=new Set();
+const lists=['plots','ledger','household','work','quotaOwners','quota','debts','assets','rates'];
+const season=()=>$('season').value;
+const seasonalLists=['ledger','work','quota'];
+const forSeason=(key,year=season())=>db[key].filter(row=>String(row.season)===year);
+const seasonPeriod=year=>'ต.ค. '+year+' – ก.ย. '+(Number(year)+1);
+function showSeasonOptions(){
+ if(!account)return;
+ const isHousehold=account==='household';
+ const savedYears=isHousehold?db.household.map(row=>String(row.season)):
+  [...Object.keys(db.closed),...seasonalLists.flatMap(key=>db[key].map(row=>String(row.season)))];
+ const current=isHousehold?householdYear:defaultSeason;
+ const preferred=String(isHousehold?current:Math.min(2572,Math.max(2568,current)));
+ const years=[...new Set([...plannedSeasons,preferred,...savedYears.filter(year=>/^\d{4}$/.test(year))])].sort();
+ const picker=$('season');
+ const previous=selectedYears[account];
+ picker.innerHTML=years.map(year=>'<option value="'+year+'">'+'ปีงบ '+year+(!isHousehold&&!plannedSeasons.includes(year)?' (ข้อมูลเดิม)':'')+'</option>').join('');
+ picker.value=years.includes(previous)?previous:preferred;
+}
+const total=(rows,fn)=>cents(rows.reduce((s,x)=>s+fn(x),0));
+const gross=x=>cents(num(x.qty)*num(x.rate));
+const due=x=>cents(gross(x)-num(x.deduct)-num(x.paid));
+const quotaHistory69=[];
+const quotaRoles=[['grower','ลูกไร่'],['owner','เจ้าของโควต้า (อ้อยของตัวเอง)'],['','ยังไม่ระบุ']];
+const caneTypes=[['fresh','อ้อยสด'],['burnt','อ้อยไฟไหม้'],['','ยังไม่ระบุ']];
+const equipmentOwnership=[['own','รถของเรา'],['hired','รถของคนอื่น'],['','ยังไม่ระบุ']];
+const quotaMethods=[['auto','หักตามสูตร'],['manual','ใช้ยอดหักที่กรอก'],['buy','ซื้ออ้อยแบบขายขาด']];
+const quotaRole=x=>x.role||'';
+const quotaWeight=value=>num(value).toLocaleString('th-TH',{maximumFractionDigits:3});
+const quotaType=x=>caneTypes.find(([id])=>id===(x.cane||''))?.[1]||'ยังไม่ระบุ';
+const quotaFeeLabels={check:'ค่าเช็ค',association:'ค่าสมาคม',tax:'ภาษี',haul:'ค่าคีบและบรรทุกเหมารวม',truck:'ค่าบรรทุก',loading:'ค่าคีบ',burn:'ค่าอ้อยไฟไหม้',analysis:'ค่าเครื่องวิเคราะห์',other:'รายจ่ายอื่น'};
+const enteredRate=value=>value!==''&&value!=null&&Number.isFinite(Number(value))&&Number(value)>=0;
+function quotaTransport(x){
+ const {truckSource,loaderSource}=x;
+ const validSource=source=>source==='own'||source==='hired';
+ if(!truckSource&&!loaderSource)return {rates:{haul:350}};
+ if(!validSource(truckSource)||!validSource(loaderSource))return {error:'เลือกรถบรรทุกและรถคีบให้ครบ'};
+ if(truckSource==='own'&&loaderSource==='own')return {rates:{haul:350}};
+ if(loaderSource==='hired'&&!enteredRate(x.loaderRate))return {error:'กรอกค่าคีบของรถคนอื่นที่หักจากลูกไร่ (ใส่ 0 หากไม่มีการหัก)'};
+ if(truckSource==='own'&&!enteredRate(x.truckRate))return {error:'กรอกค่าบรรทุกของรถเราที่หักจากลูกไร่เมื่อจ้างรถคีบ (ใส่ 0 หากไม่มีการหัก)'};
+ const truck=enteredRate(x.truckRate)?Number(x.truckRate):300;
+ return {rates:{truck,loading:loaderSource==='own'?120:Number(x.loaderRate)}};
+}
+function quotaEquipmentLabel(row,key){
+ const source=row[key+'Source'];
+ if(!source)return '—';
+ const label=equipmentOwnership.find(([id])=>id===source)?.[1]??'—';
+ return source==='hired'&&row[key+'Provider']?label+' · '+row[key+'Provider']:label;
+}
+const quotaFormula=x=>{
+ const raw=num(x.qty)*num(x.rate), tons=num(x.qty), thip=x.factory==='ทิพย์';
+ return {check:raw*0.0025,association:tons*3,tax:raw*(thip?0.00808:0.0075),
+  ...Object.fromEntries(Object.entries(quotaTransport(x).rates??{}).map(([key,rate])=>[key,tons*rate])),burn:x.cane==='burnt'?tons*30:0,analysis:thip?tons:0,other:num(x.deduct)};
+};
+const quotaDeductions=x=>x.fees?cents(Object.values(x.fees).reduce((a,b)=>a+num(b),0)):num(x.deduct);
+const quotaNet=x=>cents(gross(x)-quotaDeductions(x));
+const quotaPayable=x=>x.method==='buy'?cents(num(x.qty)*num(x.buyRate)):quotaNet(x);
+const quotaDue=x=>quotaRole(x)==='owner'?0:cents(quotaPayable(x)-num(x.paid));
+const quotaKey=x=>[x.factory,x.quota,x.ticket,x.name].map(v=>String(v??'').trim().toLowerCase()).join('\u001f');
+function quotaTable(columns,rows,rowAction){
+ if(!rows.length)return '<div class="empty">ยังไม่มีรายการ</div>';
+ return '<div class="table"><table><thead><tr>'+columns.map(v=>'<th scope="col">'+esc(v)+'</th>').join('')+
+  (rowAction?'<th scope="col">จัดการ</th>':'')+'</tr></thead><tbody>'+rows.map((r,i)=>'<tr>'+r.map(v=>'<td>'+esc(v)+'</td>').join('')+
+  (rowAction?'<td>'+rowAction(i)+'</td>':'')+'</tr>').join('')+'</tbody></table></div>';
+}
+const quotaSummaryColumns=['ชื่อ','อ้อยสด (ตัน)','ไฟไหม้ (ตัน)','ยังไม่แยก (ตัน)','รวม (ตัน)','ยอดโรงงานก่อนหัก','รายจ่าย / รายการหัก','สุทธิหลังหัก'];
+function quotaSummary(rows){
+ const groups=new Map();
+ for(const x of rows){
+  const key=JSON.stringify([quotaRole(x),x.name.trim().toLowerCase()]);
+  if(!groups.has(key))groups.set(key,{name:x.name,role:quotaRole(x),rows:[]});
+  groups.get(key).rows.push(x);
+ }
+ const columns=[...quotaSummaryColumns,'ยอดจ่ายเจ้าของ','จ่ายแล้ว','คงจ่าย'];
+ const sections=[['grower','ลูกไร่'],['owner','เจ้าของโควต้า · อ้อยของตัวเอง'],['','รายการเดิมที่ยังไม่ระบุประเภทเจ้าของ']];
+ return sections.filter(([role])=>[...groups.values()].some(g=>g.role===role)).map(([role,title])=>{
+  const lines=[...groups.values()].filter(g=>g.role===role).sort((a,b)=>a.name.localeCompare(b.name,'th')).map(g=>{
+   const list=g.rows, weight=type=>quotaWeight(list.filter(x=>(x.cane||'')===type).reduce((a,x)=>a+num(x.qty),0));
+   return [g.name,weight('fresh'),weight('burnt'),weight(''),quotaWeight(list.reduce((a,x)=>a+num(x.qty),0)),
+    money(total(list,gross)),money(total(list,quotaDeductions)),money(total(list,quotaNet)),
+    ...(role==='owner'?['—','—','—']:[money(total(list,quotaPayable)),money(total(list,x=>num(x.paid))),money(total(list,quotaDue))])];
+  });
+  return '<h3>'+title+'</h3>'+quotaTable(columns,lines);
+ }).join('')||'<div class="empty">ยังไม่มีรายการในปีงบที่เลือก</div>';
+}
+function quotaOverview(rows){
+ const groups=new Map();
+ for(const row of rows){
+  const key=JSON.stringify([row.factory,row.quota]);
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(row);
+ }
+ const lines=[...groups].map(([key,list])=>{
+  const weight=type=>quotaWeight(list.filter(x=>type===undefined||(x.cane||'')===type).reduce((a,x)=>a+num(x.qty),0));
+  const growers=list.filter(x=>quotaRole(x)!=='owner');
+  return [...JSON.parse(key),weight('fresh'),weight('burnt'),weight(''),weight(),
+   money(total(list,gross)),money(total(list,quotaDeductions)),money(total(growers,quotaPayable)),money(total(growers,quotaDue))];
+ });
+ return '<div class="box"><h2>ภาพรวมแยกตามโควต้า</h2><p class="muted">รวมน้ำหนักและยอดโรงงานของทุกเจ้าของในโควต้า ยอดโรงงานรวมมีเงินของลูกไร่ที่รับแทน</p>'+quotaTable(['โรงงาน','เลขโควต้า','สด (ตัน)','ไฟไหม้ (ตัน)','ยังไม่แยก (ตัน)','รวม (ตัน)','ยอดโรงงาน','รายจ่าย / รายการหัก','ยอดจ่ายเจ้าของ','คงจ่าย'],lines)+'</div>';
+}
+function historicalQuota(){
+ if(season()!=='2568')return '';
+ const groups=new Map();
+ for(const row of quotaHistory69){
+  if(!groups.has(row[0]))groups.set(row[0],[]);
+  groups.get(row[0]).push(row);
+ }
+ const value=(rows,index)=>{
+  const available=rows.filter(x=>x[index]!==null);
+  return (available.length?money(total(available,x=>x[index])):'—')+(available.length<rows.length?' (ข้อมูลบางส่วน)':'');
+ };
+ const groupRows=owner=>[...groups].filter(([name])=>(name==='ทัด')===owner).sort(([a],[b])=>a.localeCompare(b,'th')).map(([name,rows])=>{
+  const weight=i=>rows.reduce((a,x)=>a+x[i],0);
+  return [name,quotaWeight(weight(1)),quotaWeight(weight(2)),quotaWeight(weight(1)+weight(2)),value(rows,3),value(rows,4),value(rows,5),owner?'—':value(rows,7)];
+ });
+ const columns=quotaSummaryColumns.filter((_,i)=>i!==3).concat('ยอดจ่ายตามวิธีคิดในไฟล์');
+ const details=quotaHistory69.map(([name,fresh,burnt,gross,fees,net,method,payout,file,note])=>[name,file,quotaWeight(fresh),quotaWeight(burnt),money(gross),fees===null?'—':money(fees),method==='owner'||payout===null?'—':money(payout),note]);
+ return '<div class="box"><h2>ข้อมูลอ้างอิงปีงบ 68 · ไฟล์อ้อยปี 69</h2><p class="muted">อ้างอิงงวด ม.ค.–มี.ค. 2569 แยกจากรายการที่กรอกในเว็บ ยอดจ่ายตามไฟล์เป็นยอดคำนวณ ส่วนสถานะจ่ายดูได้ในรายละเอียด</p><h3>ลูกไร่</h3>'+quotaTable(columns,groupRows(false))+'<h3>เจ้าของโควต้า · อ้อยของทัด</h3>'+quotaTable(columns,groupRows(true))+'<details><summary>ดูยอดรายไฟล์และจุดที่ต้องตรวจสอบ</summary>'+quotaTable(['ชื่อ','ไฟล์ต้นทาง','สด (ตัน)','ไฟไหม้ (ตัน)','ยอดก่อนหัก','รายจ่าย / รายการหัก','ยอดจ่ายตามไฟล์','หมายเหตุ'],details)+'</details></div>';
+}
+function quotaPreview(form){
+ const x=Object.fromEntries(new FormData(form));
+ const out=form.querySelector('[data-quota-preview]');
+ const transport=quotaTransport(x);
+ if(x.method!=='manual'&&transport.error){out.textContent=transport.error;return;}
+ if(!x.qty||!x.rate){out.textContent='กรอกน้ำหนักและราคาเพื่อดูยอดคำนวณ';return;}
+ if(x.method!=='manual'&&(!x.cane||x.factory==='อื่น ๆ')){out.textContent='เลือกประเภทอ้อยและโรงงานที่มีสูตร หรือเลือกกรอกยอดหักเอง';return;}
+ if(x.method==='buy'&&!num(x.buyRate)){out.textContent='กรอกราคาซื้อขาดเพื่อดูยอดจ่าย';return;}
+ const fees=x.method==='manual'?null:quotaFormula(x);
+ const row={...x,fees};
+ out.textContent=(fees?Object.entries(fees).filter(([,v])=>v).map(([key,v])=>quotaFeeLabels[key]+' '+money(v)).join(' · ')+' | ':'')+
+  'ยอดโรงงาน '+money(gross(row))+' · หักรวม '+money(quotaDeductions(row))+' · '+(x.role==='owner'?'สุทธิ '+money(quotaNet(row)):'ยอดจ่าย '+money(quotaPayable(row))+' · คงจ่าย '+money(quotaDue(row)));
+}
+
+const debtPayments=x=>Array.isArray(x.payments)?x.payments:[];
+const debtPaid=x=>cents(num(x.paid)+total(debtPayments(x),entry=>num(entry.amount)));
+const debtTimeline=row=>[...debtPayments(row)].sort((a,b)=>a.date.localeCompare(b.date));
+const debtCheckpoint=timeline=>timeline.findLastIndex(entry=>Number.isFinite(entry.reportedBalance));
+function debtDue(row){
+ const timeline=debtTimeline(row),index=debtCheckpoint(timeline);
+ return index<0?cents(num(row.amount)-debtPaid(row)):
+  cents(timeline[index].reportedBalance-total(timeline.slice(index+1),entry=>num(entry.amount)));
+}
+function pendingDebtPayments(row){
+ const timeline=debtTimeline(row);
+ return timeline.slice(debtCheckpoint(timeline)+1).filter(entry=>entry.allocationPending).length;
+}
+const plotName=id=>db.plots.find(p=>p.id===id)?.name??'ส่วนกลาง';
+const plotAccountLabel=account=>plotAccounts.find(([key])=>key===account)?.[1];
+const plotAccount=x=>{
+ if(plotAccountLabel(x.account))return x.account;
+ const owner=String(x.owner??'').trim();
+ if(['ทัด','ของทัด'].includes(owner))return 'tad';
+ if(['แม่','ของแม่'].includes(owner))return 'mother';
+ return /^p[1-5]$/.test(x.id)?'mother':'';
+};
+function restorePlotAccounts(data){
+ for(const plot of data.plots)plot.account=plotAccount(plot);
+ const recorded=data.plots.find(plot=>plot.id===tadPlot.id)||data.plots.find(plot=>
+  num(plot.area)===5&&(plot.account==='tad'||(plot.account===''&&['แปลงของทัด','ไร่ของทัด','ไร่ทัด'].includes(String(plot.name??'').trim())))
+ );
+ if(recorded){if(!recorded.account)recorded.account='tad';}
+ // Private seed plot omitted in the public export.
+ return data;
+}
+const plotOptions=()=>[['','ส่วนกลาง / ยังไม่ระบุ'],...db.plots.map(x=>{
+ const account=plotAccount(x);
+ return [x.id,account?plotAccountLabel(account)+' · '+x.name:x.name];
+})];
+const oldDebts=[];
+const debtGroups=[
+ {id:'business',title:'หนี้ธุรกิจ',kinds:['หนี้ธุรกิจ','ค่าใช้จ่ายค้างจ่าย','เงินค้างรับ'],scopes:['ธุรกิจ']},
+ {id:'mother',title:'หนี้แม่',kinds:['หนี้ของแม่'],scopes:['แม่']},
+ {id:'tad',title:'หนี้ทัด',kinds:['หนี้ส่วนตัว','หนี้ครัวเรือน'],scopes:['ส่วนตัว','ครัวเรือน']}
+];
+const debtKinds=debtGroups.flatMap(({title,kinds})=>kinds.map(kind=>[kind,kind===title?kind:title+' · '+kind]));
+const debtReferenceKinds={'แม่':'หนี้ของแม่','ครัวเรือน':'หนี้ครัวเรือน','ส่วนตัว':'หนี้ส่วนตัว','ธุรกิจ':'หนี้ธุรกิจ'};
+const debtReferenceKey=([scope,name])=>JSON.stringify([scope,name]);
+const hasRecordedDebt=(rows,reference)=>db.debts.some(row=>row.referenceKey===debtReferenceKey(reference))||
+ rows.some(row=>String(row.name??'').trim()===reference[1]&&row.kind!=='เงินค้างรับ');
+function debtGroupTable(records,references){
+ const rows=[
+  ...records.map(row=>({cells:[...cells('debts',row),'บันทึกแล้ว',row.note||'—'],row})),
+  ...references.map(ref=>{
+   const [scope,name,amount,note]=ref;
+   return {cells:[name,debtReferenceKinds[scope],amount===null?'รอตรวจสอบ':money(amount),'—','—',
+    amount===null?'รอตรวจสอบ':money(amount),'—','ยอดอ้างอิง',note||'—'],reference:ref};
+  })
+ ];
+ return quotaTable([...headers.debts,'สถานะ','หมายเหตุ'],rows.map(item=>item.cells),index=>{
+  const {row,reference}=rows[index];
+  if(row)return '<button type="button" data-edit="'+esc('debts:'+row.id)+'">แก้ไขข้อมูลหนี้</button>'+debtPaymentButton(row);
+  return reference[2]===null?'—':'<button type="button" data-debt-reference="'+oldDebts.indexOf(reference)+'">ยืนยันยอด / แก้ไข</button>';
+ });
+}
+const isCooperativeDebt=row=>row.id==='coop-development-403-69'||(
+ ['หนี้ครัวเรือน','หนี้ส่วนตัว'].includes(row.kind)&&String(row.name??'').trim()==='สหกรณ์ / บ้าน'
+);
+const debtPaymentTotal=entry=>entry.allocationPending?num(entry.totalPaid):cents(num(entry.amount)+num(entry.interest)+num(entry.shares)+num(entry.fees));
+const hasPaymentBreakdown=entry=>entry.interest!==undefined||entry.shares!==undefined;
+function cooperativeHistory(payments){
+ let shares=null;
+ return [...payments].sort((a,b)=>a.date.localeCompare(b.date)).map(entry=>{
+  if(Number.isFinite(entry.accumulatedShares))shares=entry.accumulatedShares;
+  else if(Number.isFinite(entry.shares))shares=cents((shares??0)+entry.shares);
+  return {entry,shares};
+ });
+}
+function debtPaymentEditFields(row,entry){
+ const date=['date','วันที่','date'];
+ const balance=['reportedBalance','ยอดหนี้หลังจ่าย (ถ้าทราบ)','optionalNumber'];
+ if(entry.allocationPending)return [date,['totalPaid','ยอดที่จ่ายจริง (บาท)','positive'],balance];
+ if(row.kind==='เงินค้างรับ')return [date,['amount','ยอดรับ (บาท)','positive']];
+ const fields=[date,['amount','เงินต้นที่ชำระ (บาท)','number'],['interest','ดอกเบี้ย (บาท)','optionalNumber']];
+ if(isCooperativeDebt(row))return [...fields,
+  ['installment','งวดตามใบเสร็จ','optional'],['shares','หุ้นสหกรณ์งวดนี้','optionalNumber'],
+  ['accumulatedShares','หุ้นสะสมตามใบเสร็จ (ถ้ามี)','optionalNumber'],['balance','เงินต้นคงเหลือตามใบเสร็จ (ถ้ามี)','optionalNumber']];
+ return [...fields,['fees','ค่าธรรมเนียม (บาท)','optionalNumber'],balance];
+}
+function editDebtPaymentView(row,entry){
+ if(!entry)return '';
+ return '<section class="box"><h3>แก้ไขงวด '+esc(entry.date)+'</h3><form data-form="debt-edit-payment">'+
+  debtPaymentEditFields(row,entry).map(spec=>field(spec,entry)).join('')+
+  '<div class="actions form-actions"><button class="primary">บันทึกการแก้ไข</button><button type="button" data-cancel-debt-edit>ยกเลิก</button></div></form></section>';
+}
+function debtPaymentView(row){
+ const incoming=row.kind==='เงินค้างรับ';
+ const verb=incoming?'รับเงิน':'ชำระ';
+ const remaining=debtDue(row);
+ const payments=debtPayments(row);
+ const cooperative=isCooperativeDebt(row);
+ const ordered=cooperative?cooperativeHistory(payments):[];
+ const historyEntries=cooperative?ordered.map(({entry})=>entry):debtTimeline(row);
+ const history=cooperative?ordered.map(({entry,shares})=>[
+  entry.date,entry.installment||'—',money(entry.amount),entry.interest===undefined?'—':money(entry.interest),
+  entry.shares===undefined?'—':money(entry.shares),hasPaymentBreakdown(entry)?money(debtPaymentTotal(entry)):'—',
+  shares===null?'—':money(shares),entry.balance===undefined?'—':money(entry.balance)
+ ]):historyEntries.map(entry=>incoming?[entry.date,money(entry.amount)]:[
+  entry.date,entry.allocationPending?'รอแยกยอด':money(entry.amount),
+  entry.interest===undefined?'—':money(entry.interest),entry.fees===undefined?'—':money(entry.fees),money(debtPaymentTotal(entry)),entry.reportedBalance===undefined?'—':money(entry.reportedBalance)
+ ]);
+ const columns=cooperative?['วันที่','งวด','เงินต้นที่ลด','ดอกเบี้ย','หุ้นสหกรณ์','เงินจ่ายรวม','หุ้นสะสม','เงินต้นคงเหลือตามใบเสร็จ']:incoming?['วันที่','จำนวนเงิน']:['วันที่','เงินต้นที่ลด','ดอกเบี้ย','ค่าธรรมเนียม','เงินจ่ายรวม','ยอดหนี้หลังจ่ายที่แจ้ง'];
+ const monthlyFields='<label>งวดตามใบเสร็จ (ถ้ามี)<input type="text" name="installment" maxlength="20" placeholder="เช่น 6/240"></label>'+
+  '<label>หุ้นสหกรณ์เดือนนี้ (บาท)<input type="number" name="shares" value="1000" min="0" step="0.01" required></label>';
+ const interestField='<label>ดอกเบี้ยงวดนี้ (บาท)<input type="number" name="interest" min="0" step="0.01" '+(cooperative?'required':'value="0" required')+'></label>';
+ const feeField='<label>ค่าธรรมเนียมที่จ่าย (ถ้ามี)<input type="number" name="fees" value="0" min="0" step="0.01"></label>';
+ const paymentFields=incoming?'':interestField+(cooperative?monthlyFields:feeField)+
+  '<p class="muted form-actions" data-debt-payment-total aria-live="polite">ยอดจ่ายรวม '+money(cooperative?1000:0)+'</p>';
+ const form=remaining>0?'<form data-form="debt-payment"><label>วันที่'+verb+'<input type="date" name="date" required value="'+today()+'"></label>'+
+  '<label>'+(incoming?'ยอดรับงวดนี้':'เงินต้นที่ชำระงวดนี้')+' (บาท)<input type="number" name="amount" min="'+(incoming?'0.01':'0')+'" step="0.01" max="'+remaining+'" required></label>'+
+  paymentFields+'<div class="actions form-actions"><button class="primary">บันทึก'+verb+'</button></div></form>':'<p>ครบยอดแล้ว</p>';
+ const pending=payments.map((entry,index)=>({entry,index})).filter(({entry})=>entry.allocationPending);
+ const selected=payments[debtAllocationIndex];
+ const unknownForm=incoming||cooperative?'':'<details open><summary>ลงยอดจ่ายและยอดหนี้คงเหลือ</summary><form data-form="debt-unallocated">'+
+  '<label>วันที่จ่าย<input name="date" type="date" required value="'+today()+'"></label>'+
+  '<label>ยอดที่จ่ายจริง (บาท)<input name="totalPaid" type="number" min="0.01" step="0.01" required></label>'+
+  '<label>ยอดหนี้คงเหลือหลังจ่าย (ถ้าทราบ)<input name="reportedBalance" type="number" min="0" step="0.01"></label>'+
+  '<p class="muted form-actions">ใช้ยอดคงเหลือที่เจ้าหนี้แสดงหลังจ่าย หากยอดใหม่ยังไม่ขึ้น เว้นช่องนี้ไว้ได้</p>'+
+  '<div class="actions form-actions"><button class="primary">บันทึกยอดจ่าย</button></div></form></details>';
+ const pendingButtons=pending.map(({entry,index})=>'<button type="button" data-debt-allocation="'+index+'">'+
+  esc(entry.date)+' · '+money(entry.totalPaid)+' · แยกเงินต้น/ดอกเบี้ย</button>').join(' ');
+ const updateBalance=selected?.allocationPending?'<form data-form="debt-reported-balance"><label>ยอดหนี้หลังจ่ายงวด '+esc(selected.date)+'<input name="reportedBalance" type="number" min="0" step="0.01" required value="'+esc(selected.reportedBalance??'')+'"></label><div class="actions form-actions"><button class="primary">บันทึกเฉพาะยอดคงเหลือ</button></div></form>':'';
+ const allocationForm=selected?.allocationPending?'<form data-form="debt-allocation"><p class="muted form-actions">ยอดที่จ่าย '+money(selected.totalPaid)+' · '+esc(selected.date)+'</p>'+
+  '<label>เงินต้นที่ลด (บาท)<input name="amount" type="number" min="0" step="0.01" required></label>'+
+  '<label>ดอกเบี้ย (บาท)<input name="interest" type="number" min="0" step="0.01" required></label>'+feeField+
+  '<div class="actions form-actions"><button class="primary">บันทึกการแยกยอด</button></div></form>':'';
+ const savings=ordered.at(-1)?.shares;
+ const savingsLabel=payments.some(entry=>Number.isFinite(entry.accumulatedShares))?'หุ้นสหกรณ์สะสม':'หุ้นสหกรณ์ที่บันทึก';
+ return '<div class="box" id="debt-payment-panel"><h2>'+verb+' · '+esc(row.name)+'</h2><p>ยอดตั้งต้น '+money(row.amount)+' · '+(incoming?'รับแล้ว':'ตัดเงินต้นแล้ว')+' '+money(debtPaid(row))+' · คงเหลือ '+money(remaining)+'</p>'+
+  (!incoming&&payments.some(entry=>entry.interest!==undefined)?'<p class="muted sub">ดอกเบี้ยที่บันทึกรวม '+money(total(payments,entry=>num(entry.interest)))+'</p>':'')+
+  (savings!=null?'<p><strong>'+savingsLabel+' '+money(savings)+'</strong></p>':'')+
+  (row.note?'<p class="muted sub">'+esc(row.note)+'</p>':'')+unknownForm+
+  (incoming||cooperative?form:remaining>0?'<details><summary>กรอกแยกเงินต้นและดอกเบี้ย</summary>'+form+'</details>':'')+
+  '<h3>ประวัติ'+verb+'</h3>'+(num(row.paid)?'<p class="muted sub">ยอดก่อนเริ่มบันทึกงวด '+money(row.paid)+'</p>':'')+
+  (incoming?'':'<p class="muted sub">ยอดหนี้ลดตามเงินต้นที่ชำระ ดอกเบี้ยรวมในยอดจ่ายของแต่ละงวด'+(cooperative?' และหุ้นสหกรณ์สะสมแยกจากหนี้':'')+'</p>')+
+  quotaTable(columns,history,i=>'<button type="button" data-edit-debt-payment="'+payments.indexOf(historyEntries[i])+'">แก้ไขงวด</button>')+
+  editDebtPaymentView(row,payments[debtEditPaymentIndex])+(pending.length?(pendingDebtPayments(row)?'<p class="muted sub">ยอดคงเหลือยังไม่สะท้อนบางงวดที่รอตรวจยอด</p>':'')+'<div class="actions">'+pendingButtons+'</div>'+updateBalance+allocationForm:'')+'<button type="button" data-cancel>ปิด</button></div>';
+}
+function debtFigures(rows,label,paidLabel,dueLabel){
+ return '<p class="muted sub">'+label+' '+money(total(rows,row=>num(row.amount)))+' · '+paidLabel+' '+money(total(rows,debtPaid))+' · '+dueLabel+' '+money(total(rows,debtDue))+'</p>';
+}
+const debtProgress=(starting,paid)=>starting>0?fmt(100*paid/starting)+'%':'—';
+function debtView(){
+ const sections=[...debtGroups];
+ const knownKinds=new Set(debtKinds.map(([kind])=>kind));
+ const unknown=db.debts.filter(row=>!knownKinds.has(row.kind));
+ if(unknown.length)sections.push({id:'other',title:'รายการเดิมที่ยังไม่จัดกลุ่ม',kinds:unknown.map(row=>row.kind),scopes:[]});
+ const groups=sections.map(({id,title,kinds,scopes})=>{
+  const rows=db.debts.filter(row=>kinds.includes(row.kind));
+  const payables=rows.filter(row=>row.kind!=='เงินค้างรับ');
+  const receivables=rows.filter(row=>row.kind==='เงินค้างรับ');
+  const references=oldDebts.filter(([scope])=>scopes.includes(scope));
+  const unrecorded=references.filter(reference=>!hasRecordedDebt(rows,reference));
+  const recordedDue=total(payables,debtDue);
+  const progressRows=payables.filter(row=>debtCheckpoint(debtTimeline(row))<0);
+  const referenceDue=total(unrecorded,row=>num(row[2]));
+  return {id,title,rows,receivables,unrecorded,recordedDue,referenceDue,
+   missing:unrecorded.filter(row=>row[2]===null).length,
+   hasStatements:progressRows.length<payables.length,
+   progress:debtProgress(total(progressRows,row=>num(row.amount)),total(progressRows,debtPaid))};
+ });
+ const due=total(groups,g=>g.recordedDue), referenceDue=total(groups,g=>g.referenceDue);
+ const pendingCount=db.debts.reduce((count,row)=>count+pendingDebtPayments(row),0);
+ const missing=groups.reduce((count,g)=>count+g.missing,0);
+ const summary='<div class="box"><h2>ยอดรวมหนี้ทั้งหมดที่ทราบ</h2><p class="debt-total">'+money(cents(due+referenceDue))+'</p>'+
+  '<p class="muted sub">คงจ่ายที่บันทึก '+money(due)+' · ยอดอ้างอิงรอตรวจ '+money(referenceDue)+
+  (missing?' · อีก '+missing+' รายการยังไม่มีตัวเลขที่ยืนยัน':'')+(pendingCount?' · ยังไม่หัก '+pendingCount+' งวดที่รอแยกเงินต้น':'')+'</p><div class="actions"><button type="button" data-add-debt>เพิ่มหนี้หรือเงินค้าง</button></div></div>';
+ const details=groups.map(g=>{
+  const note=g.progress==='—'?(g.hasStatements?'ใช้ยอดคงเหลือหลังจ่ายที่แจ้ง':'ยังไม่มีข้อมูลการชำระ'):'ตัดเงินต้นแล้ว '+g.progress+' ของยอดตั้งต้นที่คำนวณได้';
+  return '<details class="box debt-group" data-debt-group="'+g.id+'"'+(openDebtGroups.has(g.id)?' open':'')+'><summary>'+
+   '<span class="debt-group-heading"><span>'+g.title+'</span><strong class="debt-group-amount">'+money(cents(g.recordedDue+g.referenceDue))+'</strong></span>'+
+   '<span class="muted debt-group-sub">'+note+(g.referenceDue?' · รวมยอดอ้างอิงที่รอตรวจ':'')+(g.missing?' · ยังมีรายการรอตรวจยอด':'')+'</span></summary>'+
+   (g.receivables.length?debtFigures(g.receivables,'ลูกหนี้ตั้งต้น','รับแล้ว','คงรับ'):'')+
+   debtGroupTable(g.rows,g.unrecorded)+'</details>';
+ }).join('');
+ const reference=oldDebts[debtReferenceIndex];
+ const defaults=reference?{date:'',kind:debtReferenceKinds[reference[0]],name:reference[1],amount:reference[2],note:reference[3]}:{};
+ const payment=db.debts.find(row=>row.id===debtPaymentId);
+ const entry=addingDebt||reference||edit?.key==='debts'
+  ?editor('debts',reference?'ตรวจยอดตั้งต้นจากรายการอ้างอิง':'บันทึกหนี้หรือเงินค้าง',defaults)
+   :'';
+ return summary+details+(payment?debtPaymentView(payment):'')+entry;
+}
+const plantingHistory=[];
+const historyView=()=>'<div class="box"><h2>ต้นทุนย้อนหลัง</h2><p>ข้อมูลอ้างอิงส่วนตัวไม่ได้รวมใน source สาธารณะ</p></div>';
+const vehicleOptions=()=>[['','ไม่ระบุรถ'],...db.assets.map(x=>[x.id,x.name])];
+const vehicleName=id=>db.assets.find(x=>x.id===id)?.name??(id?'รถที่ไม่มีในทะเบียน':'—');
+const categories=['ขายอ้อย','บริการรถคีบ','บริการรถหกล้อ','ค่าเช่าที่ดิน','ปลูกและบำรุง','อาหารและกาแฟคนงาน','น้ำมัน','พ.ร.บ. / ประกันรถ','ซ่อมบำรุงและยาง','รายการหักโรงงาน','ดอกเบี้ย','อื่น ๆ'];
+const householdCategories=['เงินเดือน','รายได้เสริม','รายรับอื่น ๆ','อาหารและของใช้','ค่าน้ำ ค่าไฟ และค่าโทรศัพท์','ค่าเดินทาง','ค่าใช้จ่ายในบ้าน','ค่าเล่าเรียน','ค่ารักษาพยาบาล','ชำระหนี้','รายจ่ายอื่น ๆ'];
+const quotaOwnerOptions=()=>[['','ยังไม่ผูกโควต้า'],...db.quotaOwners.map(x=>[x.id,x.name+(x.code?' · '+x.code:'')+(x.factory?' · '+x.factory:'')])];
+const spec={
+quotaOwners:[['name','ชื่อโควต้า / เจ้าของโควต้า'],['code','เลขโควต้า (กรอกเมื่อทราบ)','optional'],['factory','โรงงาน',[['','ยังไม่ระบุ'],'นครเพชร','ทิพย์','อื่น ๆ']],['note','หมายเหตุ','optional']],
+plots:[['account','กลุ่มแปลง',plotAccounts],['name','ชื่อแปลง'],['area','พื้นที่ (ไร่)','positive'],['rent','ค่าเช่าต่อปี (บาท)','optionalNumber'],['owner','เจ้าของ / ผู้รับผิดชอบ','optional'],['cycle','รอบอ้อย เช่น ตอ 2','optional'],['note','หมายเหตุ','optional']],
+ledger:[['date','วันที่','date'],['kind','ประเภท',[['income','รายรับ'],['expense','รายจ่าย']]],['name','หมวดรายการ',()=>[...new Set([...categories,...db.ledger.map(x=>x.name)])]],['plot','แปลง',plotOptions],['vehicle','รถที่เกี่ยวข้อง',vehicleOptions],['qty','น้ำหนักขายหรือบริการ (ตัน)','optionalNumber'],['rate','ราคาต่อตัน (บาท)','optionalNumber'],['amount','ยอดเงิน (บาท)','positive'],['note','รายละเอียด','optional']],
+household:[['date','วันที่','date'],['kind','ประเภท',[['income','รายรับ'],['expense','รายจ่าย']]],['name','หมวดรายการ',()=>[...new Set([...householdCategories,...db.household.map(row=>row.name)])]],['amount','ยอดเงิน (บาท)','positive'],['note','รายละเอียด','optional']],
+work:[['date','วันที่ทำงาน','date'],['name','ชื่อคนงาน / ทีม'],['job','งาน',()=>db.rates.filter(r=>r.kind==='ค่าแรง').map(r=>r.name)],['plot','แปลง',plotOptions],['qty','ปริมาณงาน','positive'],['rate','อัตราต่อหน่วย (บาท)','number'],['deduct','เงินเบิกล่วงหน้า / หัก (บาท)','number'],['paid','จ่ายแล้วรวม (บาท)','number'],['note','หน่วยและหมายเหตุ','optional']],
+quota:[['quotaOwnerId','เลือกโควต้า',quotaOwnerOptions],['date','วันที่ชั่ง','date'],['round','วันรับเงิน / งวด','optionalDate'],['factory','โรงงาน',['นครเพชร','ทิพย์','อื่น ๆ']],['quota','เลขโควต้า'],['ticket','เลขตั๋วชั่ง (ใช้ร่วมกันได้เมื่อแบ่งเจ้าของ)'],['name','ชื่อเจ้าของอ้อย'],['role','ประเภทเจ้าของ',quotaRoles],['cane','ประเภทอ้อย',caneTypes],['qty','น้ำหนักส่วนของเจ้าของ (ตัน)','tons'],['rate','ราคาโรงงาน (บาท/ตัน)','positive'],['truckSource','รถบรรทุก',equipmentOwnership],['loaderSource','รถคีบ',equipmentOwnership],['truckProvider','ผู้ให้บริการรถบรรทุก (ถ้ามี)','optional'],['loaderProvider','ผู้ให้บริการรถคีบ (ถ้ามี)','optional'],['truckRate','ค่าบรรทุกแยก (บ./ตัน ถ้ามี)','optionalNumber'],['loaderRate','ค่าคีบรถคนอื่น (บ./ตัน)','optionalNumber'],['method','วิธีคิด',quotaMethods],['buyRate','ราคาซื้อขาด (บาท/ตัน)','optionalNumber'],['deduct','รายจ่ายอื่น / ยอดหักทั้งหมดเมื่อกรอกเอง (บาท)','number'],['paid','จ่ายเจ้าของแล้วรวม (บาท)','number'],['note','หมายเหตุ','optional']],
+debts:[['date','วันที่อ้างอิงยอด','date'],['name','เจ้าหนี้ / ลูกหนี้ / รายการ'],['kind','บัญชี / ประเภท',debtKinds],['amount','ยอดตั้งต้น (บาท)','positive'],['paid','ยอดจ่ายหรือรับก่อนเริ่มบันทึกงวด (บาท)','number'],['dueDate','ครบกำหนด','optionalDate'],['note','ดอกเบี้ย / งวด / หมายเหตุ','optional']],
+assets:[['name','ชื่อรถ'],['kind','ประเภท'],['note','เจ้าของ / ไฟแนนซ์ / หลักประกัน','optional']],
+rates:[['name','งาน / บริการ'],['kind','ประเภท',['ค่าแรง','รายรับ']],['unit','หน่วย'],['rate','บาทต่อหน่วย','number']]};
+const headers={quotaOwners:['ชื่อโควต้า','เลขโควต้า','โรงงาน','หมายเหตุ'],household:['วันที่','ประเภท','หมวดรายการ','ยอดเงิน','รายละเอียด'],plots:['แปลง','ไร่','ค่าเช่า/ปี','รายรับ','ต้นทุน','กำไร','ต้นทุน/ไร่'],ledger:['วันที่','ประเภท','รายการ','แปลง','รถ','ตัน','บาท/ตัน','ยอดเงิน','รายละเอียด'],work:['วันที่','คนงาน','งาน','แปลง','ยอดรวม','คงจ่าย'],quota:['วันที่ชั่ง','งวดรับเงิน','โรงงาน','โควต้า','ตั๋ว','เจ้าของอ้อย','ประเภทอ้อย','ตัน','รถบรรทุก','รถคีบ','ยอดโรงงาน','รายการหัก','สุทธิหลังหัก','ยอดจ่ายเจ้าของ','คงจ่าย'],debts:['รายการ','ประเภท','ยอดตั้งต้น','ตัดเงินต้น / รับแล้ว','เปอร์เซ็นต์','คงเหลือ','ครบกำหนด'],assets:['ชื่อ','ประเภท','รายละเอียด'],rates:['งาน / บริการ','ประเภท','หน่วย','บาท/หน่วย']};
+function summary(plot,year=season()){
+ const ledger=forSeason('ledger',year).filter(x=>plot===undefined||x.plot===plot);
+ const work=forSeason('work',year).filter(x=>plot===undefined||x.plot===plot);
+ const income=total(ledger.filter(x=>x.kind==='income'),x=>num(x.amount));
+ const expense=cents(total(ledger.filter(x=>x.kind==='expense'),x=>num(x.amount))+total(work,gross));
+ return {income,expense,profit:cents(income-expense)};
+}
+function cells(k,x){
+ if(k==='quotaOwners')return [x.name,x.code||'ยังไม่ระบุ',x.factory||'ยังไม่ระบุ',x.note];
+ if(k==='household')return [x.date,x.kind==='income'?'รายรับ':'รายจ่าย',x.name,money(x.amount),x.note];
+ if(k==='plots'){const s=summary(x.id);return [x.name,fmt(x.area),x.rent===''||x.rent===undefined?'รอตรวจสอบ':money(x.rent),money(s.income),money(s.expense),money(s.profit),x.area?money(s.expense/x.area):'—'];}
+ if(k==='ledger')return [x.date,x.kind==='income'?'รายรับ':'รายจ่าย',x.name,plotName(x.plot),vehicleName(x.vehicle),x.qty?fmt(x.qty):'—',x.rate?money(x.rate):'—',money(x.amount),x.note];
+ if(k==='work')return [x.date,x.name,x.job,plotName(x.plot),money(gross(x)),money(due(x))];
+ if(k==='quota')return [x.date,x.round||'—',x.factory,x.quota,x.ticket,x.name,quotaType(x),quotaWeight(x.qty),quotaEquipmentLabel(x,'truck'),quotaEquipmentLabel(x,'loader'),money(gross(x)),money(quotaDeductions(x)),money(quotaNet(x)),quotaRole(x)==='owner'?'—':money(quotaPayable(x)),quotaRole(x)==='owner'?'—':money(quotaDue(x))];
+ if(k==='debts')return [x.name,x.kind,money(x.amount),money(debtPaid(x)),debtCheckpoint(debtTimeline(x))<0?debtProgress(num(x.amount),debtPaid(x)):'ตามยอดที่แจ้ง',money(debtDue(x)),x.dueDate||'—'];
+ return k==='rates'?[x.name,x.kind,x.unit,money(x.rate)]:[x.name,x.kind,x.note];
+}
+function debtPaymentButton(row){
+ const label=debtDue(row)<=0?'ประวัติ':row.kind==='เงินค้างรับ'?'บันทึกรับเงิน':'บันทึกชำระ';
+ return ' <button type="button" data-debt-payment="'+esc(row.id)+'">'+label+'</button>';
+}
+function table(k,rows,allow=true){
+ if(!rows.length)return '<div class="empty">ยังไม่มีรายการ</div>';
+ return '<div class="table"><table><thead><tr>'+headers[k].map(x=>'<th>'+esc(x)+'</th>').join('')+(allow?'<th>จัดการ</th>':'')+'</tr></thead><tbody>'+rows.map(x=>'<tr>'+cells(k,x).map(v=>'<td>'+esc(v)+'</td>').join('')+(allow?'<td><button data-edit="'+esc(k+':'+x.id)+'" type="button">แก้ไข</button></td>':'')+'</tr>').join('')+'</tbody></table></div>';
+}
+function field([key,label,type],row){
+ const value=row[key]??(key==='account'?'':key==='date'?today():['paid','deduct'].includes(key)?0:'');
+ let opts=typeof type==='function'?type():type;
+ if(type===debtKinds&&value&&!debtKinds.some(([kind])=>kind===value))opts=[...debtKinds,[value,'ประเภทเดิม · '+value]];
+ if(Array.isArray(opts))return '<label>'+label+'<select name="'+key+'" '+(['plot','role','cane','account','vehicle','truckSource','loaderSource','quotaOwnerId','factory'].includes(key)?'':'required')+'>'+opts.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o];return '<option value="'+esc(v)+'" '+(value===v?'selected':'')+'>'+esc(t)+'</option>';}).join('')+'</select></label>';
+ const numeric=['number','positive','optionalNumber','tons'].includes(type);
+ const date=['date','optionalDate'].includes(type);
+ return '<label>'+label+'<input name="'+key+'" value="'+esc(value)+'" type="'+(numeric?'number':date?'date':'text')+'" '+(numeric?'min="'+(type==='tons'?'0.001':type==='positive'?'0.01':'0')+'" step="'+(type==='tons'?'0.001':'0.01')+'" ':'')+(String(type).startsWith('optional')?'':'required')+'></label>';
+}
+function editor(k,title,defaults={}){
+ const first=db.rates.find(x=>x.kind==='ค่าแรง');
+ let row=edit?.key===k?db[k].find(x=>x.id===edit.id)||{}:k==='work'&&first?{job:first.name,rate:first.rate,note:first.unit}:defaults;
+ if(k==='quota')row=row.id?{...row,method:row.method||'manual',role:row.role||'',cane:row.cane||'',truckSource:row.truckSource||'',loaderSource:row.loaderSource||''}:
+  {...row,truckSource:'own',loaderSource:'own'};
+ const seasonal=seasonalLists.includes(k);
+ if(k==='household'&&!row.id&&season()!==String(householdYear))row={...row,date:''};
+ if(seasonal&&!row.id&&season()!==String(defaultSeason))row={...row,date:''};
+ const locked=db.closed[season()]&&seasonal;
+ if(locked)return '<div class="box">ฤดูนี้ปิดแล้ว เปิดปีงบอีกครั้งจากหน้าภาพรวมเพื่อแก้ไข</div>';
+ return '<div class="box"><h2>'+esc(row.id?'แก้ไขรายการ':title)+'</h2>'+(seasonal||k==='household'?'<p class="muted sub">บันทึกใน'+'ปีงบ '+esc(season())+'</p>':'')+'<form data-form="'+k+'">'+spec[k].map(f=>field(f,row)).join('')+(k==='quota'?'<p class="muted form-actions" data-quota-preview aria-live="polite"></p>':'')+'<div class="actions form-actions"><button class="primary">บันทึก</button>'+(row.id||defaults.vehicle||defaults.name||(k==='debts'&&addingDebt)?'<button type="button" data-cancel>ยกเลิก</button>':'')+'</div></form></div>';
+}
+const metric=(label,value)=>'<div class="metric"><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>';
+function list(k,title,note,rows){return editor(k,title)+'<div class="box"><h2>รายการที่บันทึก</h2><p class="muted sub">'+esc(note)+'</p>'+table(k,rows,!db.closed[season()]||!['ledger','work','quota'].includes(k))+'</div>';}
+function plotAccountTables(allowEdit){
+ return plotAccounts.map(([account,label])=>{
+  const rows=db.plots.filter(plot=>plotAccount(plot)===account);
+  if(!rows.length&&!account)return '';
+  const area=total(rows,plot=>num(plot.area));
+  const figures=rows.map(plot=>summary(plot.id));
+  const subtotals=account?' · รายรับ '+money(total(figures,x=>x.income))+' · ต้นทุน '+money(total(figures,x=>x.expense))+' · กำไร '+money(total(figures,x=>x.profit)):'';
+  return '<h3>'+label+'</h3><p class="muted sub">'+rows.length+' แปลง · '+fmt(area)+' ไร่'+subtotals+'</p>'+table('plots',rows,allowEdit);
+ }).join('');
+}
+function readLegacyCsv(raw){
+ const rows=[];let row=[],value='',quoted=false;
+ const source=raw.replace(/^\uFEFF/,'');
+ for(let i=0;i<source.length;i++){
+  const c=source[i];
+  if(c==='"'){if(quoted&&source[i+1]==='"'){value+='"';i++;}else quoted=!quoted;}
+  else if(c===','&&!quoted){row.push(value);value='';}
+  else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&source[i+1]==='\n')i++;row.push(value);rows.push(row);row=[];value='';}
+  else value+=c;
+ }
+ if(quoted)throw Error('CSV quotes');
+ if(row.length||value)rows.push([...row,value]);
+ const expected='วันที่,ประเภท,รายการ,แปลง,จำนวน,หน่วย,อัตราต่อหน่วย,จำนวนเงิน,หมายเหตุ';
+ if(rows.shift()?.join(',')!==expected)throw Error('CSV header');
+ const seen=new Map();
+ return rows.filter(r=>r.some(Boolean)).map(r=>{
+  const [date,type,name,plot,qty,unit,rate,amount,note]=r;
+  if(r.length!==9||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!['รายรับ','รายจ่าย'].includes(type)||!Number.isFinite(Number(amount))||num(amount)<=0)throw Error('CSV row');
+  const [year,month]=date.split('-').map(Number);
+  const key=JSON.stringify(r),occurrence=(seen.get(key)??0)+1;seen.set(key,occurrence);
+  return {id:'legacy-'+encodeURIComponent(key)+'-'+occurrence,date,kind:type==='รายรับ'?'income':'expense',name,plot:db.plots.find(p=>p.name===plot)?.id??'',qty:unit==='ตัน'?num(qty):'',rate:unit==='ตัน'?num(rate):'',amount:num(amount),note:[note,plot&&!db.plots.some(p=>p.name===plot)?'แปลงเดิม '+plot:'',qty?qty+' '+unit+' × '+rate:''].filter(Boolean).join(' · '),season:String(year+543-(month<4?1:0))};
+ });
+}
+function vehicleView(){
+ const vehicles=db.assets;
+ const ledger=forSeason('ledger');
+ const rows=vehicles.map(vehicle=>{
+  const entries=ledger.filter(row=>row.vehicle===vehicle.id);
+  const income=total(entries.filter(row=>row.kind==='income'),row=>num(row.amount));
+  const expenses=total(entries.filter(row=>row.kind==='expense'),row=>num(row.amount));
+  return [vehicle.name,vehicle.kind,money(income),money(expenses),money(income-expenses),String(entries.length)];
+ });
+ const intro='<div class="box"><h2>สรุปรถรายคัน · ฤดู '+esc(season())+'</h2><p class="muted sub">รวมจากรายการบัญชีที่เลือกรถไว้ในฤดูนี้ หากเคยลงรายการแล้ว ให้แก้ไขรายการเดิมและเลือกรถคันที่เกี่ยวข้อง</p>'+
+  quotaTable(['รถ','ประเภท','รายรับ','รายจ่าย','สุทธิ','จำนวนรายการ'],rows)+'</div>';
+ const selected=vehicles.find(vehicle=>vehicle.id===activeVehicle)??vehicles[0];
+ if(!selected)return intro+list('assets','เพิ่มรถหรืออุปกรณ์','ทะเบียนรถ',vehicles);
+ const options=vehicles.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===selected.id?'selected':'')+'>'+esc(x.name)+'</option>').join('');
+ const locked=db.closed[season()];
+ const buttons=locked?'':'<div class="actions"><button type="button" data-vehicle-entry="income">เพิ่มรายรับ</button><button type="button" data-vehicle-entry="expense">เพิ่มรายจ่าย</button></div>';
+ const detail='<div class="box"><h2>รายการของรถ</h2><label>เลือกรถ <select id="active-vehicle">'+options+'</select></label>'+buttons+
+  table('ledger',ledger.filter(row=>row.vehicle===selected.id),!locked)+'</div>';
+ const form=vehicleEntryKind||edit?.key==='ledger'
+  ?editor('ledger',vehicleEntryKind==='income'?'เพิ่มรายรับของรถ':'เพิ่มรายจ่ายของรถ',{vehicle:selected.id,kind:vehicleEntryKind})
+  :'';
+ return intro+detail+form+list('assets','เพิ่มรถหรืออุปกรณ์','ทะเบียนรถ',vehicles);
+}
+function fiscalReviewView(){
+ const keys=account==='household'?['household']:seasonalLists;
+ const pending=keys.flatMap(key=>db[key].filter(row=>row.fiscalNeedsReview).map(row=>({key,row})));
+ return pending.length?'<details class="box"><summary>รอตรวจวันที่เพื่อจัดปีงบ · '+pending.length+' รายการ</summary><p>ยังไม่รวมยอดเหล่านี้ในปีงบ กดแก้ไขแล้วกรอกวันที่จริง โดยเลือกปีงบที่ตรงกับวันที่ก่อน</p>'+pending.map(({key,row})=>'<p>'+esc(row.name||row.id)+' · ปีเดิม '+esc(row.originalSeason||'ไม่ระบุ')+' <button type="button" data-edit="'+esc(key+':'+row.id)+'">แก้ไขวันที่</button></p>').join('')+'</details>':'';
+}
+function overviewPicker(){
+ const years=[...new Set([...plannedSeasons,...(account==='household'?db.household.map(x=>String(x.season)):seasonalLists.flatMap(key=>db[key].map(x=>String(x.season))))])].filter(x=>/^\d{4}$/.test(x)).sort();
+ return '<section class="box"><h2>ข้อมูล 5 ปี</h2><p class="muted">เลือกปีเพื่อแสดงข้อมูล'+'ตามปีงบ ต.ค.–ก.ย.'+' · ยังไม่มีการเลือกปีจะไม่แสดงยอดสรุป</p><div class="actions">'+years.map(year=>'<button type="button" data-overview-year="'+year+'" aria-pressed="'+(overviewYears[account]===year)+'" '+(overviewYears[account]===year?'class="primary"':'')+'>ปีงบ '+year+'</button>').join('')+'</div>'+(overviewYears[account]?'<p>กำลังดูปีงบ '+esc(overviewYears[account])+' <button type="button" data-overview-clear>ปิดข้อมูลปีนี้</button></p>':'')+'</section>'+fiscalReviewView();
+}
+function fiveYearView(){
+ if(!overviewYears[account])return overviewPicker();
+ const s=summary(undefined,season());
+ return overviewPicker()+'<div class="box"><h2>สรุปปีงบ '+esc(season())+'</h2><p>'+esc(seasonPeriod(season()))+'</p><div class="grid">'+metric('รายรับธุรกิจ',money(s.income))+metric('ต้นทุนรวมค่าแรง',money(s.expense))+metric('กำไรตามรายการ',money(s.profit))+'</div><button type="button" data-tab="home">ดูภาพรวมของปีนี้</button></div>';
+}
+function receiptSummary(key,year=season()){
+ const rows=forSeason(key,year);
+ const income=total(rows.filter(x=>x.kind==='income'),x=>num(x.amount));
+ const expense=total(rows.filter(x=>x.kind==='expense'),x=>num(x.amount));
+ const months=[...new Set(rows.map(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')?x.date.slice(0,7):'ไม่ระบุวันที่'))].sort();
+ const monthly=months.map(month=>{
+  const selected=rows.filter(x=>(/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')?x.date.slice(0,7):'ไม่ระบุวันที่')===month);
+  const incoming=total(selected.filter(x=>x.kind==='income'),x=>num(x.amount)),outgoing=total(selected.filter(x=>x.kind==='expense'),x=>num(x.amount));
+  const label=month==='ไม่ระบุวันที่'?month:month.slice(5)+'/'+(Number(month.slice(0,4))+543);
+  return [label,money(incoming),money(outgoing),money(cents(incoming-outgoing))];
+ });
+ return {income,expense,net:cents(income-expense),monthly,count:rows.length};
+}
+function receiptSummaryView(key){
+ const s=receiptSummary(key),household=key==='household';
+ const note=household?'รวมเฉพาะรายการในบัญชีครัวเรือนตามปีงบที่เลือก':'รวมเฉพาะสมุดรายรับ–รายจ่ายไร่อ้อยของปีงบที่เลือก ค่าแรงที่คำนวณไว้ ตั๋วอ้อย ยอดค้าง และประวัติชำระหนี้จะไม่ถูกรวมอัตโนมัติ หากมีการรับหรือจ่ายจริงให้ลงสมุดรายรับ–รายจ่ายหนึ่งครั้ง เพื่อไม่ให้นับเงินซ้ำ';
+ return '<section class="box"><h2>สรุปรับ–จ่ายสุทธิ · '+(household?'ปี พ.ศ. ':'ปีงบ ')+esc(season())+'</h2><div class="grid">'+metric('รับมาแล้วตามสมุด',money(s.income))+metric('จ่ายไปแล้วตามสมุด',money(s.expense))+metric(s.net<0?'จ่ายมากกว่ารับ':'รับหักจ่ายสุทธิ',money(s.net))+'</div><p class="muted">'+note+' · '+s.count+' รายการ</p><p class="muted">ยอดสุทธิ = รายรับ − รายจ่าย ไม่รวมเงินยกมา จึงไม่ใช่ยอดเงินในบัญชีธนาคาร</p><details><summary>ดูสรุปรายเดือน</summary>'+quotaTable(['เดือน / พ.ศ.','รับ (บาท)','จ่าย (บาท)','สุทธิ (บาท)'],s.monthly)+'</details><p><button type="button" data-tab="'+(household?'household':'ledger')+'">ดูหรือเพิ่มรายการรับ–จ่าย</button></p></section>';
+}
+function householdOverview(){
+ const rows=forSeason('household');
+ const income=total(rows.filter(row=>row.kind==='income'),row=>num(row.amount));
+ const expense=total(rows.filter(row=>row.kind==='expense'),row=>num(row.amount));
+ const latest=[...rows].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+ return '<div class="grid">'+metric('รายรับครัวเรือน',money(income))+metric('รายจ่ายครัวเรือน',money(expense))+'</div><div class="box"><h2>รายการล่าสุด · ปี '+esc(season())+'</h2>'+
+  '<button type="button" data-tab="household">ลงรายรับ–รายจ่าย</button>'+table('household',latest,false)+'</div>';
+}
+function ensureQuotaOwners(data){
+ if(data.quotaOwners===undefined)data.quotaOwners=[].map(([id,name])=>({id,name,code:'',factory:'',note:''}));
+}
+function groupedQuotaRows(rows){
+ const groups=db.quotaOwners.map(owner=>({id:owner.id,name:owner.name,owner,rows:[]}));
+ for(const row of rows){
+  let group=groups.find(g=>g.id===row.quotaOwnerId);
+  if(!group){
+   const id='unlinked:'+JSON.stringify([row.factory||'',row.quota||'']);
+   group=groups.find(g=>g.id===id);
+   if(!group){group={id,name:'ยังไม่ผูกเจ้าของ · '+(row.factory||'ไม่ระบุโรงงาน')+' · '+(row.quota||'ไม่ระบุเลขโควต้า'),rows:[]};groups.push(group);}
+  }
+  group.rows.push(row);
+ }
+ return groups;
+}
+function quotaTons(rows){const sum=list=>list.reduce((a,x)=>a+Math.round(num(x.qty)*1000),0)/1000;return [sum(rows),sum(rows.filter(x=>x.cane==='fresh')),sum(rows.filter(x=>x.cane==='burnt')),sum(rows.filter(x=>!['fresh','burnt'].includes(x.cane)))].map(quotaWeight);}
+function quotaGroupsView(){
+ const groups=groupedQuotaRows(forSeason('quota'));
+ return '<div class="box"><h2>ยอดอ้อยแยกโควต้า · ฤดู '+esc(season())+'</h2><p class="muted">เปิดแต่ละโควต้าเพื่อดูเจ้าของอ้อยทั้งหมด รวมอ้อยของเจ้าของโควต้าและลูกไร่ ใช้น้ำหนักส่วนของแต่ละคนจึงไม่ซ้ำเมื่ออยู่ตั๋วเดียวกัน ข้อมูลเดิมที่ยังไม่ผูกเจ้าของแสดงแยกไว้ ให้แก้ไขตั๋วเพื่อเลือกโควต้าที่ถูกต้อง</p>'+groups.map(group=>{
+  const people=[...new Set(group.rows.map(x=>String(x.name||'ไม่ระบุชื่อ').trim()))];
+  const columns=['เจ้าของอ้อย / ลูกไร่','รวม (ตัน)','สด (ตัน)','ไฟไหม้ (ตัน)','ยังไม่ระบุ (ตัน)'];
+  return '<details class="box"><summary><strong>'+esc(group.name)+'</strong> · '+quotaTons(group.rows)[0]+' ตัน · '+people.length+' คน</summary><p class="muted">'+esc(group.owner?[group.owner.factory||'ยังไม่ระบุโรงงาน',group.owner.code||'ยังไม่ระบุเลขโควต้า'].join(' · '):'โปรดผูกโควต้าในตั๋วชั่ง')+'</p>'+quotaTable(columns,[['รวมทั้งโควต้า',...quotaTons(group.rows)],...people.map(name=>[name,...quotaTons(group.rows.filter(x=>String(x.name||'ไม่ระบุชื่อ').trim()===name))])])+'<h3>ตั๋วชั่งของโควต้านี้</h3>'+table('quota',group.rows,!db.closed[season()])+'</details>';
+ }).join('')+'</div>'+editor('quotaOwners','เพิ่มเจ้าของโควต้า')+'<div class="box"><h2>ทะเบียนโควต้า</h2><p class="muted">ชื่อโควต้าแยกจากชื่อเจ้าของอ้อยในตั๋ว เพิ่มหรือแก้ไขได้เอง เลขโควต้าและโรงงานกรอกเมื่อทราบ</p>'+table('quotaOwners',db.quotaOwners)+'</div>';
+}
+function searchText(value){return String(value??'').normalize('NFKC').toLocaleLowerCase('th-TH').replace(/[,\s]+/g,' ').trim();}
+function searchRecords(query){
+ const terms=searchText(query).split(' ').filter(Boolean);if(!terms.length)return [];
+ const keys=account==='household'?['household']:['ledger','work','quota','quotaOwners','plots','debts','assets','rates'];
+ const matches=[];
+ for(const key of keys){
+  const rows=seasonalLists.includes(key)||key==='household'?forSeason(key):db[key];
+  for(const row of rows){
+   const values=[...cells(key,row),...spec[key].map(([field])=>row[field])];
+   for(const date of [row.date,row.round,row.dueDate])if(/^\d{4}-\d{2}-\d{2}$/.test(date||'')){
+    const [y,m,d]=date.split('-');values.push(d+'/'+m+'/'+y,d+'/'+m+'/'+(Number(y)+543),(Number(y)+543)+'-'+m+'-'+d);
+   }
+   const text=searchText(values.join(' '));
+   if(terms.every(term=>text.includes(term)))matches.push({key,row});
+  }
+ }
+ return matches;
+}
+function renderSearch(){
+ const matches=recordSearch?searchRecords(recordSearch):[];
+ $('search-results').innerHTML=!recordSearch?'':'<h3>ผลค้นหา '+matches.length+' รายการ</h3>'+(matches.length?
+  '<div class="table"><table><thead><tr><th>หมวด</th><th>รายการ</th><th>จัดการ</th></tr></thead><tbody>'+matches.map(({key,row})=>
+   '<tr><td>'+esc(key==='household'?'รายรับ–รายจ่ายครัวเรือน':(key==='quotaOwners'?'ทะเบียนโควต้า':labels[key]))+'</td><td>'+esc(cells(key,row).filter(v=>v!==undefined&&v!=='').join(' · '))+'</td><td><button type="button" data-search-open="'+esc(key+':'+row.id)+'">เปิดรายการ</button></td></tr>').join('')+'</tbody></table></div>':'<p class="empty">ไม่พบรายการ ลองใช้คำสั้นลงหรือเปลี่ยนปีที่เลือก</p>');
+}
+function ensureMenus(data){
+ data.menuSettings??={};
+ if(typeof data.menuSettings!=='object'||Array.isArray(data.menuSettings))throw Error('menu format');
+ for(const [scope,defaults] of Object.entries({cane:labels,household:householdTabs})){
+  data.menuSettings[scope]??=[];
+  if(!Array.isArray(data.menuSettings[scope])||!data.menuSettings[scope].every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'&&['feature','folder','page'].includes(x.type))||new Set(data.menuSettings[scope].map(x=>x.id)).size!==data.menuSettings[scope].length)throw Error('menu format');
+  for(const [id,name] of Object.entries(defaults))if(!data.menuSettings[scope].some(x=>x.id===id))data.menuSettings[scope].push({id,name,type:'feature',parent:'',hidden:false});
+ }
+}
+function menuItems(){return (db.menuSettings[account]||[]).filter(item=>item.id!=='years');}
+function canNest(items,id,parent){
+ const visited=new Set([id]);let current=parent;
+ while(current){if(visited.has(current))return false;visited.add(current);const row=items.find(x=>x.id===current);if(!row||row.type!=='folder')return false;current=row.parent;}
+ return true;
+}
+function menuTree(parent='',seen=new Set()){
+ return '<div class="menu-tree">'+menuItems().filter(x=>(x.parent||'')===parent&&!x.hidden&&!seen.has(x.id)).map(item=>{
+  const next=new Set([...seen,item.id]);
+  return item.type==='folder'?'<details><summary>📁 '+esc(item.name)+'</summary>'+menuTree(item.id,next)+'</details>':'<button type="button" data-tab="'+esc(item.id)+'" '+(tab===item.id?'class="active" aria-current="page"':'')+'>'+esc(item.name)+'</button>';
+ }).join('')+'</div>';
+}
+function menuParentOptions(id,current){return [['','หน้าหลัก'],...menuItems().filter(x=>x.type==='folder'&&canNest(menuItems(),id,x.id)).map(x=>[x.id,x.name])].map(([value,name])=>'<option value="'+esc(value)+'" '+(value===current?'selected':'')+'>'+esc(name)+'</option>').join('');}
+function menuManager(){return '<div class="box"><h2>จัดหัวข้อ · '+esc(accountTitles[account])+'</h2><p>เปลี่ยนชื่อ เลือกโฟลเดอร์ แล้วกดบันทึก ใช้ปุ่มขึ้น–ลงหรือลากที่ปุ่ม ↕ เพื่อเรียงหัวข้อ ซ่อนแล้วเปิดกลับได้ที่หน้านี้ ข้อมูลบัญชีและสูตรเดิมยังอยู่</p><form data-form="menu-add"><label>ชื่อหัวข้อ<input name="name" required maxlength="80"></label><label>ชนิด<select name="type"><option value="folder">โฟลเดอร์รวมเมนู</option><option value="page">หน้าจดบันทึก</option></select></label><label>อยู่ใน<select name="parent">'+menuParentOptions('', '')+'</select></label><button class="primary">เพิ่มหัวข้อ</button></form><p class="muted">หน้าจดบันทึกใช้เก็บข้อความ หัวข้อที่ต้องมีสูตรคำนวณใหม่ต้องเพิ่มฟังก์ชันให้ก่อน</p></div>'+menuItems().map(item=>'<div class="box menu-row" data-menu-id="'+esc(item.id)+'"><form data-form="menu-edit"><input name="id" type="hidden" value="'+esc(item.id)+'"><label>ชื่อหัวข้อ<input name="name" required maxlength="80" value="'+esc(item.name)+'"></label><label>อยู่ในโฟลเดอร์<select name="parent">'+menuParentOptions(item.id,item.parent||'')+'</select></label><label>การแสดง<select name="hidden"><option value="no" '+(!item.hidden?'selected':'')+'>แสดง</option><option value="yes" '+(item.hidden?'selected':'')+'>ซ่อน</option></select></label><button>บันทึก</button></form><div class="actions"><button type="button" class="menu-grip" data-menu-drag="'+esc(item.id)+'" aria-label="ลากเรียง '+esc(item.name)+'">↕ ลาก</button><button type="button" data-menu-up="'+esc(item.id)+'">ขึ้น ↑</button><button type="button" data-menu-down="'+esc(item.id)+'">ลง ↓</button></div></div>').join('');}
+function customMenuView(){const item=menuItems().find(x=>x.id===tab);return item?.type==='page'?'<div class="box"><h2>'+esc(item.name)+'</h2><form data-form="menu-note"><input type="hidden" name="id" value="'+esc(item.id)+'"><label class="form-actions">บันทึกข้อความ<textarea name="note" rows="10">'+esc(item.note||'')+'</textarea></label><button class="primary">บันทึกข้อความ</button></form><p class="muted">ข้อความนี้ไม่ถูกนำไปคำนวณยอดบัญชี</p></div>':'<div class="box"><h2>'+esc(item?.name||'หัวข้อ')+'</h2>'+menuTree(tab)+'<button type="button" data-tab="menuManager">จัดหัวข้อ</button></div>';}
+let draggingMenu=null;
+document.addEventListener('pointerdown',event=>{const handle=event.target.closest('[data-menu-drag]');if(!handle||saving)return;draggingMenu={id:handle.dataset.menuDrag,x:event.clientX,y:event.clientY};event.preventDefault();});
+document.addEventListener('pointercancel',()=>{draggingMenu=null;});
+document.addEventListener('pointerup',event=>{
+ const drag=draggingMenu;draggingMenu=null;if(!drag||saving||Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<12)return;
+ const target=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-menu-id]');if(!target||target.dataset.menuId===drag.id)return;
+ const next=structuredClone(db),items=next.menuSettings[account],item=items.find(x=>x.id===drag.id),other=items.find(x=>x.id===target.dataset.menuId);
+ if(!item||!other||!canNest(items,item.id,other.parent||''))return;item.parent=other.parent||'';items.splice(items.indexOf(item),1);items.splice(items.indexOf(other),0,item);void commit(next);
+});
+function render(){
+ const screen=$('screen');
+ const debtDetails=screen.querySelectorAll('[data-debt-group]');
+ if(debtDetails.length)openDebtGroups=new Set([...debtDetails].filter(item=>item.open).map(item=>item.dataset.debtGroup));
+ $('account-title').textContent=accountTitles[account]||'เลือกบัญชี';
+ $('account-controls').hidden=!account;
+ $('tabs').hidden=!account;
+ $('record-search').hidden=!account;
+ $('search-query').value=recordSearch;
+ if(account)renderSearch();
+ if(!account){
+  $('tabs').innerHTML='';
+  screen.innerHTML='<div class="account-choices">'+Object.entries(accountTitles).map(([id,title])=>
+   '<button type="button" class="account-choice" data-account="'+id+'">'+title+' <span aria-hidden="true">›</span></button>').join('')+'</div>';
+  return;
+ }
+ const isHousehold=account==='household';
+ $('period-label').textContent='ปีงบ (ปีเริ่มต้น พ.ศ.)';
+ const s=summary(),w=total(forSeason('work'),due),q=total(forSeason('quota'),quotaDue);
+ $('period').textContent=seasonPeriod(season());
+ $('tabs').innerHTML=menuTree()+'<button type="button" data-tab="menuManager">⚙ จัดหัวข้อ</button>';
+ const views={
+ quotas:quotaGroupsView,
+ quotaOwners:quotaGroupsView,
+ householdHome:householdOverview,
+ household:()=>list('household','บันทึกรายรับหรือรายจ่ายครัวเรือน','ยอดในหน้านี้ใช้สรุปบัญชีครัวเรือนตามปีงบ ต.ค.–ก.ย.',forSeason('household')),
+ home:()=>'<div class="grid">'+metric('รายรับธุรกิจ',money(s.income))+metric('ต้นทุนรวมค่าแรง',money(s.expense))+metric('กำไรตามรายการที่บันทึก',money(s.profit))+metric('ยอดคงจ่ายคนงานและเจ้าของไร่',money(w+q))+'</div><div class="box"><h2>กำไรแยกแปลง</h2><p class="muted sub">ต้นทุนต่อไร่คำนวณจากต้นทุนที่ผูกกับแปลง ค่าเช่าในทะเบียนใช้เป็นข้อมูลอ้างอิง ให้บันทึกในรายจ่ายเมื่อต้องการนำมาคิดกำไร</p>'+plotAccountTables(false)+'</div><div class="box"><h2>ปิดปีงบ</h2><p>'+ (db.closed[season()]?'ปิดฤดูแล้ว':'เปิดให้บันทึกรายการ')+'</p><p class="muted">ค่าแรงคงจ่าย '+money(w)+' · เงินรับแทนที่คงจ่าย '+money(q)+'</p><button class="primary" data-close>'+ (db.closed[season()]?'เปิดปีงบอีกครั้ง':'ปิดปีงบและล็อกรายการ')+'</button></div>',
+ years:fiveYearView,
+ ledger:()=>list('ledger','บันทึกรายรับหรือรายจ่าย','ค่าแรงที่บันทึกในเมนูค่าแรงคิดเป็นต้นทุนแล้ว ให้ลงค่าใช้จ่ายอื่นที่หน้านี้',forSeason('ledger')),
+ plots:()=>'<div class="box"><h2>ทะเบียนแปลงอ้อย</h2><p class="muted sub">ยอดรายรับและต้นทุนอ้างอิงปีงบที่เลือกและรายการที่ผูกกับแปลง</p>'+plotAccountTables(true)+'</div>'+editor('plots','เพิ่มแปลงอ้อย'),
+ work:()=>list('work','คิดค่าแรงคนงาน','คงจ่าย = ปริมาณ × อัตรา − ยอดเบิกหรือรายการหัก − ยอดจ่ายแล้ว',forSeason('work')),
+ quota:()=>'<div class="box"><button type="button" data-tab="quotas">ดูยอดตันแยกโควต้า / เพิ่มโควต้า</button></div><div class="box"><h2>สรุปรายเจ้าของอ้อย · ฤดู '+esc(season())+'</h2><p class="muted">ยอดเงินรับแทนลูกไร่แสดงแยกจากรายรับธุรกิจ กรณีแบ่งอ้อยหลายเจ้าของให้ใช้เลขตั๋วเดียวกันและกรอกน้ำหนักของแต่ละคน</p>'+quotaSummary(forSeason('quota'))+'</div>'+quotaOverview(forSeason('quota'))+list('quota','บันทึกตั๋วชั่งและยอดจ่าย','สูตรใช้ค่าเช็ค 0.25% ค่าสมาคม 3 บ./ตัน ภาษีนครเพชร 0.75% หรือทิพย์ 0.808% ค่าเครื่องวิเคราะห์ทิพย์ 1 บ./ตัน และค่าอ้อยไฟไหม้ 30 บ./ตันเฉพาะอ้อยไฟไหม้ รถของเราทั้งสองอย่างคิดเหมา 350 บ./ตัน รถบรรทุกคนอื่นใช้ 300 บ./ตันเป็นค่าเริ่มต้นและแก้ได้ ค่าคีบของเราเมื่อคิดแยก 120 บ./ตัน ถ้าจ้างรถคีบให้กรอกอัตราจริงที่หักจากลูกไร่ ช่องค่าบรรทุกแยกใช้เมื่อไม่คิดราคาเหมา หรือเลือกกรอกยอดหักเองได้',forSeason('quota'))+historicalQuota(),
+ debts:debtView,
+ assets:vehicleView,
+ rates:()=>list('rates','เพิ่มอัตราค่าแรงหรือค่าบริการ','การแก้อัตรามีผลกับการกรอกครั้งถัดไป',db.rates),
+ history:historyView,
+ backup:()=>'<div class="box"><h2>สำรองและย้ายข้อมูล</h2><p>ดาวน์โหลดข้อมูลทั้งสองบัญชีและทุกปีเป็นไฟล์ JSON เดียว หรือรวมรายการจากไฟล์ CSV ที่ดาวน์โหลดจากเว็บบัญชีอ้อยเดิม</p><div class="actions"><button data-export>ดาวน์โหลดสำรอง</button><label>เลือกไฟล์สำรอง<input id="import" type="file" accept=".json,.csv,application/json,text/csv"></label></div></div>'};
+ const isOverview=['home','householdHome'].includes(tab);
+ screen.innerHTML=isOverview?overviewPicker()+(overviewYears[account]?views[tab]()+(account==='cane'?historicalQuota():''):''):tab==='menuManager'?menuManager():views[tab]?views[tab]():customMenuView();
+ const quotaForm=document.querySelector('[data-form=quota]');if(quotaForm)quotaPreview(quotaForm);
+}
+async function commit(next){
+ if(saving)return false;
+ saving=true;
+ document.querySelectorAll('button').forEach(b=>b.disabled=true);
+ try{
+  migrateFiscal(next);
+  ensureMenus(next);
+  restorePlotAccounts(next);
+  if(local){localStorage.setItem('sugarcane-private-ledger-v1',JSON.stringify(next));}
+  else{
+   const response=await fetch('/api/ledger',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({version,data:next})});
+   if(response.status===409){await load();alert('ข้อมูลถูกอัปเดตจากอีกอุปกรณ์แล้ว ระบบโหลดข้อมูลล่าสุดให้แล้ว กรุณาตรวจและลองอีกครั้ง');return false;}
+   if(!response.ok)throw Error('save');
+   version=(await response.json()).version;
+  }
+  db=next;edit=null;vehicleEntryKind='';debtReferenceIndex=null;addingDebt=false;debtAllocationIndex=null;debtEditPaymentIndex=null;showSeasonOptions();render();return true;
+ }catch{alert('บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง');return false;}
+ finally{saving=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);}
+}
+document.addEventListener('click',event=>{
+ const b=event.target.closest('button');if(!b||!db||saving)return;
+ if(b.dataset.menuUp||b.dataset.menuDown){
+  const next=structuredClone(db),items=next.menuSettings[account],id=b.dataset.menuUp||b.dataset.menuDown,item=items.find(x=>x.id===id);
+  const siblings=items.filter(x=>(x.parent||'')===(item.parent||'')),index=siblings.indexOf(item),other=siblings[index+(b.dataset.menuUp?-1:1)];
+  if(other){const a=items.indexOf(item),c=items.indexOf(other);[items[a],items[c]]=[items[c],items[a]];void commit(next);}return;
+ }
+ if('overviewYear'in b.dataset){
+  const year=b.dataset.overviewYear;if(!/^\d{4}$/.test(year))return;overviewYears[account]=year;selectedYears[account]=year;showSeasonOptions();$('season').value=year;edit=null;render();return;
+ }
+ if('overviewClear'in b.dataset){overviewYears[account]='';render();return;}
+ if('clearSearch'in b.dataset){recordSearch='';$('search-query').value='';renderSearch();return;}
+ if(b.dataset.searchOpen){
+  const [key,...parts]=b.dataset.searchOpen.split(':');const id=parts.join(':');
+  if(!searchRecords(recordSearch).some(item=>item.key===key&&item.row.id===id))return;
+  tab=key==='quotaOwners'?'quotas':key;edit={key,id};vehicleEntryKind='';debtPaymentId='';debtReferenceIndex=null;addingDebt=false;
+  render();document.querySelector('[data-form="'+key+'"]')?.scrollIntoView({block:'center'});return;
+ }
+ if('account'in b.dataset){
+  recordSearch='';
+  const target=b.dataset.account;
+  if(target&&!Object.hasOwn(accountTitles,target))return;
+  account=target;if(account)overviewYears[account]='';tab=account==='household'?'householdHome':'home';
+  edit=null;vehicleEntryKind='';debtPaymentId='';debtReferenceIndex=null;addingDebt=false;
+  showSeasonOptions();render();return;
+ }
+ if(b.dataset.tab){tab=b.dataset.tab;edit=null;vehicleEntryKind='';debtPaymentId='';debtReferenceIndex=null;addingDebt=false;render();}
+ if('addDebt'in b.dataset){addingDebt=true;debtReferenceIndex=null;debtPaymentId='';edit=null;render();document.querySelector('[data-form=debts]')?.scrollIntoView({block:'center'});}
+ if('editDebtPayment'in b.dataset){debtEditPaymentIndex=Number(b.dataset.editDebtPayment);debtAllocationIndex=null;render();document.querySelector('[data-form=debt-edit-payment]')?.scrollIntoView({block:'center'});}
+ if('cancelDebtEdit'in b.dataset){debtEditPaymentIndex=null;render();}
+ if('debtAllocation'in b.dataset){debtEditPaymentIndex=null;debtAllocationIndex=Number(b.dataset.debtAllocation);render();document.querySelector('[data-form=debt-reported-balance]')?.scrollIntoView({block:'center'});}
+ if('debtPayment'in b.dataset){debtEditPaymentIndex=null;debtAllocationIndex=null;debtPaymentId=b.dataset.debtPayment;debtReferenceIndex=null;addingDebt=false;edit=null;render();document.getElementById('debt-payment-panel')?.scrollIntoView({block:'start'});}
+ if('debtReference'in b.dataset){debtReferenceIndex=Number(b.dataset.debtReference);debtPaymentId='';addingDebt=false;edit=null;render();document.querySelector('[data-form=debts]')?.scrollIntoView({block:'center'});}
+ if(b.dataset.vehicleEntry){vehicleEntryKind=b.dataset.vehicleEntry;edit=null;render();document.querySelector('[data-form=ledger]')?.scrollIntoView({block:'center'});}
+ if(b.dataset.edit){const [key,...idParts]=b.dataset.edit.split(':');const id=idParts.join(':');if([...seasonalLists,'household'].includes(key))tab=key;if(key==='quotaOwners')tab='quotas';edit={key,id};vehicleEntryKind='';debtPaymentId='';debtReferenceIndex=null;addingDebt=false;render();document.querySelector('[data-form="'+key+'"]')?.scrollIntoView({block:'center'});}
+ if('cancel'in b.dataset){edit=null;vehicleEntryKind='';debtPaymentId='';debtReferenceIndex=null;addingDebt=false;render();}
+ if('close'in b.dataset){const next=structuredClone(db);if(next.closed[season()])delete next.closed[season()];else{if(!confirm('ปิดฤดูนี้และล็อกรายการหรือไม่'))return;next.closed[season()]=new Date().toISOString();}void commit(next);}
+ if('export'in b.dataset){const url=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='sugarcane-ledger-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+});
+document.addEventListener('submit',event=>{
+ const k=event.target.dataset.form;if(!k)return;event.preventDefault();if(saving)return;
+ const input=Object.fromEntries([...new FormData(event.target)].map(([key,value])=>[key,value.trim()]));
+ if(['menu-add','menu-edit','menu-note'].includes(k)){
+  const next=structuredClone(db),items=next.menuSettings[account];
+  if(k==='menu-add'){if(!input.name)return;const id='custom-'+crypto.randomUUID();if(!['folder','page'].includes(input.type)||!canNest(items,id,input.parent))return;items.push({id,name:input.name.slice(0,80),type:input.type,parent:input.parent,hidden:false});}
+  else{const item=items.find(x=>x.id===input.id);if(!item)return;if(k==='menu-note'){if(item.type!=='page')return;item.note=input.note;}else{if(!input.name||!canNest(items,item.id,input.parent))return alert('ไม่สามารถย้ายโฟลเดอร์เข้าไปอยู่ในตัวเองได้');item.name=input.name.slice(0,80);item.parent=input.parent;item.hidden=input.hidden==='yes';}}
+  void commit(next);return;
+ }
+ if(k==='record-search'){recordSearch=input.query||'';renderSearch();return;}
+ if(k==='debt-edit-payment'){
+  const next=structuredClone(db),row=next.debts.find(item=>item.id===debtPaymentId);
+  const payments=row?debtPayments(row):[],entry=payments[debtEditPaymentIndex];
+  if(!entry||!input.date)return alert('กรุณาระบุวันที่ของงวด');
+  for(const [key,,type] of debtPaymentEditFields(row,entry)){
+   const value=input[key]??'';
+   if(type==='date'||type==='optional'){entry[key]=value;continue;}
+   if(value===''&&type==='optionalNumber'){delete entry[key];continue;}
+   const amount=cents(Number(value));
+   if(value===''||!Number.isFinite(amount)||amount<(type==='positive'?0.01:0))return alert('กรุณาตรวจจำนวนเงินในแต่ละช่อง');
+   entry[key]=amount;
+  }
+  if(isCooperativeDebt(row)&&payments.some(item=>item!==entry&&(item.date===entry.date||(entry.installment&&item.installment===entry.installment))))return alert('มีวันที่หรืองวดนี้อยู่แล้ว กรุณาตรวจประวัติ');
+  if(debtPaymentTotal(entry)<=0||debtDue(row)<0)return alert('ยอดจ่ายต้องมากกว่า 0 และเงินต้นที่ชำระต้องไม่เกินยอดหนี้');
+  void commit(next);return;
+ }
+ if(['debt-unallocated','debt-allocation','debt-reported-balance'].includes(k)){
+  const next=structuredClone(db),row=next.debts.find(item=>item.id===debtPaymentId);
+  if(!row||row.kind==='เงินค้างรับ'||isCooperativeDebt(row))return;
+  const payments=debtPayments(row);
+  if(k==='debt-unallocated'){
+   const totalPaid=cents(Number(input.totalPaid));
+   if(!input.date||!Number.isFinite(totalPaid)||totalPaid<=0)return alert('กรอกวันที่และยอดจ่ายจริงที่มากกว่า 0');
+   const entry={date:input.date,amount:0,totalPaid,allocationPending:true};
+   if(input.reportedBalance){
+    const reportedBalance=cents(Number(input.reportedBalance));
+    if(!Number.isFinite(reportedBalance)||reportedBalance<0)return alert('ยอดหนี้คงเหลือต้องเป็น 0 หรือมากกว่า');
+    entry.reportedBalance=reportedBalance;
+   }
+   row.payments=[...payments,entry];
+   if(debtDue(row)<0)return alert('ยอดนี้ต่ำกว่าเงินต้นที่ชำระหลังงวดนี้ กรุณาตรวจยอดจากเจ้าหนี้');
+  }else if(k==='debt-reported-balance'){
+   const pending=payments[debtAllocationIndex],reportedBalance=cents(Number(input.reportedBalance));
+   if(!pending?.allocationPending||!input.reportedBalance||!Number.isFinite(reportedBalance)||reportedBalance<0)return alert('กรอกยอดหนี้หลังจ่ายตั้งแต่ 0 ขึ้นไป');
+   pending.reportedBalance=reportedBalance;
+   if(debtDue(row)<0)return alert('ยอดนี้ต่ำกว่าเงินต้นที่ชำระหลังงวดนี้ กรุณาตรวจยอดจากเจ้าหนี้');
+  }else{
+   const pending=payments[debtAllocationIndex];
+   const amount=cents(Number(input.amount)),interest=cents(Number(input.interest)),fees=cents(Number(input.fees||0));
+   const timeline=debtTimeline(row),lastCheckpoint=debtCheckpoint(timeline);
+   const reflected=lastCheckpoint>=0&&timeline.indexOf(pending)<=lastCheckpoint;
+   if(!pending?.allocationPending||!input.amount||!input.interest||![amount,interest,fees].every(value=>Number.isFinite(value)&&value>=0)||
+    debtPaymentTotal({amount,interest,fees})!==pending.totalPaid||(!reflected&&amount>debtDue(row)))return alert('เงินต้น ดอกเบี้ย และค่าธรรมเนียมรวมกันต้องตรงกับยอดจ่ายจริง และเงินต้นต้องไม่เกินยอดคงเหลือ');
+   payments[debtAllocationIndex]={...pending,allocationPending:false,amount,interest,fees};
+  }
+  void commit(next);return;
+ }
+ if(k==='debt-payment'){
+  const next=structuredClone(db),row=next.debts.find(item=>item.id===debtPaymentId);
+  const amount=cents(Number(input.amount));
+  const incoming=row?.kind==='เงินค้างรับ';
+  const cooperative=row&&isCooperativeDebt(row);
+  if(!row||!input.date||!input.amount||!Number.isFinite(amount)||amount<(incoming?0.01:0)||amount>debtDue(row))return alert('ตรวจวันที่และยอดงวด เงินต้นต้องไม่เกินยอดคงเหลือ');
+  const payments=debtPayments(row);
+  const entry={date:input.date,amount};
+  if(!incoming){
+   const interest=cents(Number(input.interest));
+   if(!input.interest||!Number.isFinite(interest)||interest<0)return alert('กรอกดอกเบี้ยตามยอดที่ชำระ หากไม่มีให้ใส่ 0');
+   entry.interest=interest;
+   if(!cooperative){
+    const fees=cents(Number(input.fees||0));
+    if(!Number.isFinite(fees)||fees<0)return alert('ค่าธรรมเนียมต้องเป็น 0 หรือมากกว่า');
+    entry.fees=fees;
+   }
+  }
+  if(cooperative){
+   const shares=cents(Number(input.shares));
+   if(!input.shares||!Number.isFinite(shares)||shares<0)return alert('กรอกยอดหุ้นตามใบเสร็จ หากไม่มีให้ใส่ 0');
+   const startingReceipt=payments.find(item=>Number.isFinite(item.accumulatedShares));
+   if(startingReceipt&&input.date<startingReceipt.date)return alert('ใบเสร็จนี้มาก่อนยอดตั้งต้นที่ใช้ติดตามหนี้และหุ้น');
+   if(payments.some(item=>item.date===input.date||(input.installment&&item.installment===input.installment)))return alert('มีรายการวันที่หรืองวดนี้แล้ว กรุณาตรวจประวัติการชำระ');
+   Object.assign(entry,{shares,installment:input.installment||''});
+  }
+  if(debtPaymentTotal(entry)<=0)return alert('ยอดจ่ายรวมหรือยอดรับต้องมากกว่า 0');
+  row.payments=[...payments,entry];
+  void commit(next);return;
+ }
+ if(spec[k].some(([key,,type])=>!String(type).startsWith('optional')&&!['plot','role','cane','account','vehicle','truckSource','loaderSource','quotaOwnerId','factory'].includes(key)&&!input[key]))return alert('กรุณากรอกข้อมูลให้ครบ');
+ for(const [key,,type] of spec[k])if(['positive','number','optionalNumber','tons'].includes(type)&&input[key]!=='')input[key]=num(input[key]);
+ const next=structuredClone(db),id=edit?.key===k?edit.id:crypto.randomUUID();
+ const row={...input,id};
+ if(['household',...seasonalLists].includes(k)){
+  const year=fiscalYearOf(row.date);
+  if(!year||year!==season())return alert('วันที่ต้องอยู่ในปีงบ '+season()+' ('+seasonPeriod(season())+') ที่เลือกไว้ด้านบน');
+  row.season=year;row.fiscalNeedsReview=false;
+ }
+ if(['ledger','work','quota'].includes(k)){if(next.closed[season()])return;row.season=season();}
+ if(k==='work'&&due(row)<0)return alert('ยอดหักและยอดจ่ายแล้วรวมกันต้องไม่เกินยอดที่คำนวณได้');
+ if(k==='debts'){
+  const previous=next.debts.find(item=>item.id===id);
+  if(previous?.payments)row.payments=previous.payments;
+  const previousGroup=previous&&debtGroups.find(group=>group.kinds.includes(previous.kind));
+  const reference=oldDebts[debtReferenceIndex]??(previousGroup&&oldDebts.find(([scope,name])=>previousGroup.scopes.includes(scope)&&name===String(previous.name??'').trim()));
+  if(previous?.referenceKey||reference)row.referenceKey=previous?.referenceKey??debtReferenceKey(reference);
+  if(debtDue(row)<0)return alert('ยอดชำระรวมทุกงวดต้องไม่เกินยอดตั้งต้น');
+  if(debtReferenceIndex!==null&&next.debts.some(item=>item.id!==id&&(item.referenceKey===row.referenceKey||(String(item.name??'').trim()===row.name&&item.kind===row.kind))))return alert('มีรายการนี้ในบัญชีจริงแล้ว กรุณาแก้ไขรายการเดิม');
+ }
+ if(k==='quotaOwners'){
+  if(next.quotaOwners.some(x=>x.id!==id&&x.name.trim()===row.name&&x.factory===row.factory&&x.code===row.code))return alert('มีโควต้านี้แล้ว กรุณาแก้ไขรายการเดิม');
+ }
+ if(k==='quota'){
+  if(!row.factory)return alert('กรุณาระบุโรงงาน');
+  const owner=next.quotaOwners.find(x=>x.id===row.quotaOwnerId);
+  if(row.quotaOwnerId&&!owner)return alert('กรุณาเลือกโควต้าอีกครั้ง');
+  if(owner&&((owner.factory&&owner.factory!==row.factory)||(owner.code&&owner.code!==row.quota)))return alert('เลขโควต้าหรือโรงงานไม่ตรงกับทะเบียน กรุณาตรวจสอบทะเบียนโควต้าก่อน');
+  const old=next.quota.find(x=>x.id===id);
+  if(!old&&!owner)return alert('กรุณาเลือกโควต้า หากยังไม่มีให้เพิ่มในทะเบียนและสรุปโควต้าก่อน');
+  if((!row.role||!row.cane)&&!old)return alert('กรุณาระบุประเภทเจ้าของและประเภทอ้อย');
+  if(row.method==='auto'||row.method==='buy'){
+   if(!old&&(!row.truckSource||!row.loaderSource))return alert('เลือกรถบรรทุกและรถคีบให้ครบ');
+   const transport=quotaTransport(row);
+   if(transport.error)return alert(transport.error);
+   if(!row.cane||row.factory==='อื่น ๆ')return alert('สูตรอัตโนมัติใช้กับนครเพชรและทิพย์ กรุณาระบุประเภทอ้อย หรือเลือกกรอกยอดหักเอง');
+   row.fees=quotaFormula(row);
+  }
+  if(row.method==='buy'&&(num(row.buyRate)<=0||row.role!=='grower'))return alert('กรุณาระบุราคาซื้อขาดและเลือกประเภทลูกไร่');
+  if(row.role==='owner'&&num(row.paid)>0)return alert('อ้อยของเจ้าของโควต้าไม่ต้องบันทึกยอดจ่ายให้ตัวเอง');
+  if(row.role!=='owner'&&quotaDue(row)<0)return alert('ยอดจ่ายแล้วต้องไม่เกินยอดที่ต้องจ่าย');
+  if(next.quota.some(x=>x.id!==id&&String(x.season)===row.season&&quotaKey(x)===quotaKey(row)))return alert('มีเจ้าของอ้อยรายนี้ในตั๋วชั่งเดียวกันแล้ว');
+ }
+ const index=next[k].findIndex(x=>x.id===id);
+ if(index===-1)next[k].unshift(row);else next[k][index]=row;
+ void commit(next);
+});
+document.addEventListener('input',event=>{
+ const form=event.target.form;
+ if(form?.dataset.form==='quota')quotaPreview(form);
+ const receiptTotal=form?.querySelector('[data-debt-payment-total]');
+ if(receiptTotal){
+  const {amount,interest,shares,fees}=Object.fromEntries(new FormData(form));
+  receiptTotal.textContent='ยอดจ่ายรวม '+money(debtPaymentTotal({amount,interest,shares,fees}));
+ }
+});
+document.addEventListener('change',async event=>{
+ const el=event.target;
+ if(el.name==='quotaOwnerId'&&el.form?.dataset.form==='quota'){
+  const owner=db.quotaOwners.find(x=>x.id===el.value);
+  if(owner){if(owner.code)el.form.elements.quota.value=owner.code;if(owner.factory)el.form.elements.factory.value=owner.factory;}
+  quotaPreview(el.form);
+ }
+ if(el.id==='season'&&el.value){selectedYears[account]=el.value;if(['home','householdHome','years'].includes(tab))overviewYears[account]=el.value;edit=null;vehicleEntryKind='';render();}
+ if(el.id==='active-vehicle'){activeVehicle=el.value;edit=null;vehicleEntryKind='';render();}
+ if(['qty','rate'].includes(el.name)&&el.form?.dataset.form==='ledger'&&el.form.elements.qty.value&&el.form.elements.rate.value)el.form.elements.amount.value=cents(num(el.form.elements.qty.value)*num(el.form.elements.rate.value));
+ if(el.name==='job'){const rate=db.rates.find(x=>x.name===el.value);if(rate){el.form.elements.rate.value=rate.rate;if(!el.form.elements.note.value||db.rates.some(r=>r.unit===el.form.elements.note.value))el.form.elements.note.value=rate.unit;}}
+ if(el.id==='import'&&el.files[0]){
+  try{
+   const raw=await el.files[0].text();
+   if(el.files[0].name.toLowerCase().endsWith('.csv')){
+    const next=structuredClone(db),known=new Set(next.ledger.map(x=>x.id)),rows=readLegacyCsv(raw).filter(x=>!known.has(x.id));
+    for(const row of rows){row.season=fiscalYearOf(row.date);row.fiscalNeedsReview=!row.season;}
+    if(!rows.length)return alert('ไม่มีรายการใหม่ในไฟล์นี้');
+    if(rows.some(x=>next.closed[x.season]))return alert('มีรายการในฤดูที่ปิดแล้ว กรุณาเปิดฤดูนั้นก่อนนำเข้า');
+    if(confirm('เพิ่มรายการจากเว็บเดิม '+rows.length+' รายการหรือไม่')){next.ledger.unshift(...rows);await commit(next);}
+    return;
+   }
+   const incoming=JSON.parse(raw);
+   if(incoming)migrateFiscal(incoming);
+   if(incoming&&incoming.menuSettings===undefined)incoming.menuSettings=structuredClone(db.menuSettings);
+   if(incoming&&incoming.quotaOwners===undefined)incoming.quotaOwners=structuredClone(db.quotaOwners);
+   if(incoming&&incoming.household===undefined)incoming.household=structuredClone(db.household);
+   if(!incoming.closed||Array.isArray(incoming.closed)||!lists.every(k=>Array.isArray(incoming[k])&&incoming[k].every(x=>x&&typeof x.id==='string')&&new Set(incoming[k].map(x=>x.id)).size===incoming[k].length))throw Error('format');
+   if(!confirm('นำข้อมูลจากไฟล์สำรองนี้มาแทนที่รายการที่มีในไฟล์หรือไม่'))return;
+   await commit(incoming);
+  }catch{alert('รูปแบบไฟล์สำรองไม่ถูกต้อง');}
+  finally{el.value='';}
+ }
+});
+async function load(){
+ local=location.protocol==='file:';
+ try{
+  if(local){db=JSON.parse(localStorage.getItem('sugarcane-private-ledger-v1')||'null')??structuredClone(base);$('status').textContent='เก็บข้อมูลในเบราว์เซอร์นี้';}
+  else{
+   const response=await fetch('/api/ledger',{cache:'no-store'});
+   if(!response.ok)throw Error('load');
+   const state=await response.json();db=state.data??structuredClone(base);version=state.version;$('status').textContent='บัญชีส่วนตัว · ซิงก์ออนไลน์';
+  }
+  db.household??=[];
+  migrateFiscal(db);
+  ensureQuotaOwners(db);
+  ensureMenus(db);
+  restorePlotAccounts(db);
+  showSeasonOptions();
+  render();
+ }catch{$('status').textContent='โหลดบัญชีไม่สำเร็จ';$('screen').textContent='กรุณาเข้าสู่ระบบและโหลดหน้าใหม่';}
+}
+void load();
+</script></html>
