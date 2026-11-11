@@ -5,8 +5,8 @@ function decodeJwtPart(part){
  return Uint8Array.from(raw,c=>c.charCodeAt(0));
 }
 export async function verifiedOwner(request,env){
- const team=String(env.ACCESS_TEAM_DOMAIN||'').replace(/\/$/,'');
- const audience=String(env.ACCESS_AUD||'');
+ const team=String(env.ACCESS_TEAM_DOMAIN||'').trim().replace(/\/$/,'');
+ const audience=String(env.ACCESS_AUD||'').trim();
  const owner=String(env.OWNER_EMAIL||'').trim().toLowerCase();
  if(!/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(team)||!audience||!owner||owner.includes('example.com'))return {status:503,error:'ตั้งค่า Cloudflare Access และอีเมลเจ้าของก่อนใช้งาน'};
  const token=request.headers.get('Cf-Access-Jwt-Assertion');
@@ -19,11 +19,19 @@ export async function verifiedOwner(request,env){
   stage='keys_fetch';
   let cached=accessKeys.get(team);
   if(!cached||cached.until<Date.now()||!cached.keys.some(k=>k.kid===header.kid)){
-   const response=await fetch(team+'/cdn-cgi/access/certs',{redirect:'error',signal:AbortSignal.timeout(5000)});
-   if(!response.ok)throw Error('keys');const body=await response.json();
-   if(!Array.isArray(body.keys))throw Error('keys');
+   const controller=new AbortController();
+   const timer=setTimeout(()=>controller.abort(),15000);
+   let body;
+   try{
+    const response=await fetch(team+'/cdn-cgi/access/certs',{redirect:'error',signal:controller.signal});
+    stage='keys_http_'+response.status;
+    if(!response.ok)throw Error('keys');
+    stage='keys_json';body=await response.json();
+   }finally{clearTimeout(timer);}
+   stage='keys_format';if(!Array.isArray(body.keys))throw Error('keys');
    cached={keys:body.keys,until:Date.now()+300000};accessKeys.set(team,cached);
   }
+  stage='key_match';
   const jwk=cached.keys.find(k=>k.kid===header.kid&&k.kty==='RSA');if(!jwk)throw Error('key');
   stage='key_import';
   const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
