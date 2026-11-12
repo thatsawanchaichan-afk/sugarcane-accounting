@@ -518,7 +518,7 @@ function fiscalReviewView(){
 }
 function overviewPicker(){
  const years=[...new Set([...plannedSeasons,...(account==='household'?db.household.map(x=>String(x.season)):seasonalLists.flatMap(key=>db[key].map(x=>String(x.season))))])].filter(x=>/^\d{4}$/.test(x)).sort();
- return '<section class="box"><h2>ข้อมูล 5 ปี</h2><p class="muted">เลือกปีเพื่อแสดงข้อมูล'+'ตามปีงบ ต.ค.–ก.ย.'+' · ยังไม่มีการเลือกปีจะไม่แสดงยอดสรุป</p><div class="actions">'+years.map(year=>'<button type="button" data-overview-year="'+year+'" aria-pressed="'+(overviewYears[account]===year)+'" '+(overviewYears[account]===year?'class="primary"':'')+'>ปีงบ '+year+'</button>').join('')+'</div>'+(overviewYears[account]?'<p>กำลังดูปีงบ '+esc(overviewYears[account])+' <button type="button" data-overview-clear>ปิดข้อมูลปีนี้</button></p>':'')+'</section>'+fiscalReviewView();
+ return '<section class="box"><h2>ข้อมูล 5 ปี</h2><p class="muted">แสดงปีปัจจุบันอัตโนมัติ · เลือกปีอื่นเพื่อดูข้อมูลย้อนหลังตามปีงบ ต.ค.–ก.ย.</p><div class="actions">'+years.map(year=>'<button type="button" data-overview-year="'+year+'" aria-pressed="'+(overviewYears[account]===year)+'" '+(overviewYears[account]===year?'class="primary"':'')+'>ปีงบ '+year+'</button>').join('')+'</div>'+(overviewYears[account]?'<p>กำลังดูปีงบ '+esc(overviewYears[account])+' <button type="button" data-overview-clear>กลับปีปัจจุบัน</button></p>':'')+'</section>'+fiscalReviewView();
 }
 function annualAccountSummary(){
  const year=season(),cash=receiptSummary(account==='household'?'household':'ledger',year);
@@ -717,7 +717,7 @@ document.addEventListener('click',event=>{
  if('overviewYear'in b.dataset){
   const year=b.dataset.overviewYear;if(!/^\d{4}$/.test(year))return;overviewYears[account]=year;selectedYears[account]=year;showSeasonOptions();$('season').value=year;edit=null;render();return;
  }
- if('overviewClear'in b.dataset){overviewYears[account]='';render();return;}
+ if('overviewClear'in b.dataset){const year=String(defaultSeason);overviewYears[account]=year;selectedYears[account]=year;showSeasonOptions();$('season').value=year;render();return;}
  if('clearSearch'in b.dataset){recordSearch='';$('search-query').value='';renderSearch();return;}
  if(b.dataset.searchOpen){
   const [key,...parts]=b.dataset.searchOpen.split(':');const id=parts.join(':');
@@ -729,7 +729,7 @@ document.addEventListener('click',event=>{
   recordSearch='';
   const target=b.dataset.account;
   if(target&&!Object.hasOwn(accountTitles,target))return;
-  account=target;if(account)overviewYears[account]='';tab=account==='household'?'householdHome':'home';
+  account=target;if(account){selectedYears[account]=String(defaultSeason);overviewYears[account]=String(defaultSeason);}tab=account==='household'?'householdHome':'home';
   edit=null;vehicleEntryKind='';debtPaymentId='';debtReferenceIndex=null;addingDebt=false;
   showSeasonOptions();render();return;
  }
