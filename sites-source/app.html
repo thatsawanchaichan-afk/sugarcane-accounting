@@ -19,7 +19,7 @@
 .menu-row{border:1px solid #d6dfd7;border-radius:12px;padding:12px;margin:10px 0}.menu-grip{touch-action:none;cursor:grab}.menu-tree{display:flex;gap:8px;flex-wrap:wrap}.menu-tree details{border:1px solid #d6dfd7;border-radius:12px;padding:10px}.menu-tree summary{cursor:pointer;padding:8px}.menu-tree button{margin:4px}</style>
 <header><div><strong>🌾 สมุดบัญชีธุรกิจอ้อย</strong><small id="status" role="status">กำลังโหลดข้อมูล</small></div></header>
 <main><section class="hero"><div class="kicker">สมุดบัญชีส่วนตัว</div><h1 id="account-title">เลือกบัญชี</h1></section>
-<div class="toolbar" id="account-controls" hidden><button type="button" data-account="">กลับหน้าเลือกบัญชี</button><label><span id="period-label">ปีงบ</span> <select id="season"></select></label><span class="muted" id="period"></span></div>
+<div class="toolbar" id="account-controls" hidden><button type="button" data-account="">กลับหน้าเลือกบัญชี</button><label hidden><span id="period-label">ปีงบ</span> <select id="season"></select></label><span class="muted" id="period"></span></div>
 <section id="record-search" class="box" hidden><form data-form="record-search"><label class="form-actions">ค้นหารายการ<input id="search-query" name="query" type="search" placeholder="ชื่อคนงาน ลูกไร่ เลขตั๋ว รถ วันที่ หรือยอดเงิน"></label><div class="actions form-actions"><button class="primary" type="submit">ค้นหา</button><button type="button" data-clear-search>ล้างคำค้น</button></div></form><p class="muted sub">ค้นหาในบัญชีนี้ ตามปีที่เลือก รวมทะเบียนแปลง รถ อัตรา และหนี้ที่ไม่แยกปี · วันที่ค้นได้ทั้ง พ.ศ. และ ค.ศ.</p><div id="search-results" aria-live="polite"></div></section><nav id="tabs" aria-label="เมนูบัญชี" hidden></nav><div id="screen"></div></main>
 <script>
 const $=id=>document.getElementById(id);
@@ -520,6 +520,20 @@ function overviewPicker(){
  const years=[...new Set([...plannedSeasons,...(account==='household'?db.household.map(x=>String(x.season)):seasonalLists.flatMap(key=>db[key].map(x=>String(x.season))))])].filter(x=>/^\d{4}$/.test(x)).sort();
  return '<section class="box"><h2>ข้อมูล 5 ปี</h2><p class="muted">เลือกปีเพื่อแสดงข้อมูล'+'ตามปีงบ ต.ค.–ก.ย.'+' · ยังไม่มีการเลือกปีจะไม่แสดงยอดสรุป</p><div class="actions">'+years.map(year=>'<button type="button" data-overview-year="'+year+'" aria-pressed="'+(overviewYears[account]===year)+'" '+(overviewYears[account]===year?'class="primary"':'')+'>ปีงบ '+year+'</button>').join('')+'</div>'+(overviewYears[account]?'<p>กำลังดูปีงบ '+esc(overviewYears[account])+' <button type="button" data-overview-clear>ปิดข้อมูลปีนี้</button></p>':'')+'</section>'+fiscalReviewView();
 }
+function annualAccountSummary(){
+ const year=season(),cash=receiptSummary(account==='household'?'household':'ledger',year);
+ let html='<section class="box"><h2>ยอดรายรับ–รายจ่าย · ปีงบ '+esc(year)+'</h2><div class="grid">'+metric('รายรับ',money(cash.income))+metric('รายจ่าย',money(cash.expense))+metric('คงเหลือสุทธิ',money(cash.net))+'</div><p class="muted">ยอดเงินตามสมุดรายรับ–รายจ่าย '+esc(seasonPeriod(year))+'</p></section>';
+ if(account!=='cane')return html;
+ const rows=forSeason('quota',year);
+ const factories=['นครเพชร','ทิพย์',...new Set(rows.map(x=>x.factory||'ยังไม่ระบุ').filter(x=>!['นครเพชร','ทิพย์'].includes(x)))];
+ html+='<section class="box"><h2>อ้อยส่งโรงงาน · ปีงบ '+esc(year)+'</h2><div class="table"><table><thead><tr><th>โรงงาน</th><th>อ้อยสด (ตัน)</th><th>อ้อยไฟไหม้ (ตัน)</th><th>ยังไม่ระบุประเภท (ตัน)</th><th>รวม (ตัน)</th></tr></thead><tbody>';
+ for(const factory of factories){
+  const selected=rows.filter(x=>(x.factory||'ยังไม่ระบุ')===factory);
+  const tons=type=>selected.filter(x=>type==='unknown'?!['fresh','burnt'].includes(x.cane):x.cane===type).reduce((sum,x)=>sum+num(x.qty),0);
+  html+='<tr><td>'+esc(factory)+'</td><td>'+quotaWeight(tons('fresh'))+'</td><td>'+quotaWeight(tons('burnt'))+'</td><td>'+quotaWeight(tons('unknown'))+'</td><td>'+quotaWeight(selected.reduce((sum,x)=>sum+num(x.qty),0))+'</td></tr>';
+ }
+ return html+'</tbody></table></div><p class="muted">รวมจากน้ำหนักส่วนของเจ้าของในตั๋วชั่งของปีที่เลือก</p></section>';
+}
 function fiveYearView(){
  if(!overviewYears[account])return overviewPicker();
  const s=summary(undefined,season());
@@ -671,7 +685,7 @@ function render(){
  history:historyView,
  backup:()=>'<div class="box"><h2>สำรองและย้ายข้อมูล</h2><p>ดาวน์โหลดข้อมูลทั้งสองบัญชีและทุกปีเป็นไฟล์ JSON เดียว หรือรวมรายการจากไฟล์ CSV ที่ดาวน์โหลดจากเว็บบัญชีอ้อยเดิม</p><div class="actions"><button data-export>ดาวน์โหลดสำรอง</button><label>เลือกไฟล์สำรอง<input id="import" type="file" accept=".json,.csv,application/json,text/csv"></label></div></div>'};
  const isOverview=['home','householdHome'].includes(tab);
- screen.innerHTML=isOverview?overviewPicker()+(overviewYears[account]?views[tab]()+(account==='cane'?historicalQuota():''):''):tab==='menuManager'?menuManager():views[tab]?views[tab]():customMenuView();
+ screen.innerHTML=isOverview?overviewPicker()+(overviewYears[account]?annualAccountSummary()+views[tab]()+(account==='cane'?historicalQuota():''):''):overviewPicker()+(tab==='menuManager'?menuManager():views[tab]?views[tab]():customMenuView());
  const quotaForm=document.querySelector('[data-form=quota]');if(quotaForm)quotaPreview(quotaForm);
 }
 async function commit(next){
