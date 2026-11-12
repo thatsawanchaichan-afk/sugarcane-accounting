@@ -51,10 +51,10 @@ function migrateFiscal(data){
 const now=new Date(today()+'T12:00:00');
 const defaultSeason=now.getFullYear()+543-(now.getMonth()<9?1:0);
 const householdYear=defaultSeason;
-const accountTitles={cane:'บัญชีไร่อ้อย',household:'บัญชีรายรับรายจ่ายในครัวเรือน'};
+const accountTitles={cane:'บัญชีไร่อ้อย',household:'บัญชีข้าว'};
 const householdTabs={householdHome:'ภาพรวม',household:'รายรับ–รายจ่าย'};
 const plannedSeasons=['2568','2569','2570','2571','2572'];
-const labels={home:'ภาพรวม',ledger:'รายรับ–รายจ่าย',plots:'แปลงอ้อย',work:'ค่าแรง',quotas:'ทะเบียนและสรุปโควต้า',quota:'ตั๋วชั่งและเจ้าของอ้อย',debts:'หนี้และเงินค้าง',assets:'รถ',rates:'อัตราค่าแรงและค่าบริการ',history:'ต้นทุนย้อนหลัง',backup:'สำรองข้อมูล'};
+const labels={home:'หน้าหลัก',ledger:'รายรับ–รายจ่าย',plots:'แปลงอ้อย',work:'ค่าแรง',quotas:'ทะเบียนและสรุปโควต้า',quota:'ตั๋วชั่งและเจ้าของอ้อย',debts:'หนี้และเงินค้าง',assets:'รถ',rates:'อัตราค่าแรงและค่าบริการ',history:'ต้นทุนย้อนหลัง',backup:'สำรองข้อมูล'};
 const plotAccounts=[['mother','ไร่ของแม่'],['tad','ไร่ของทัด'],['','ยังไม่ระบุกลุ่ม']];
 const tadPlot={id:'plot-tad-5-rai',account:'tad',name:'แปลงตัวอย่าง',area:0,rent:'',note:''};
 const base={plots:[],ledger:[],household:[],work:[],quota:[],debts:[],assets:[],
@@ -522,7 +522,7 @@ function overviewPicker(){
 }
 function annualAccountSummary(){
  const year=season(),cash=receiptSummary(account==='household'?'household':'ledger',year);
- let html='<section class="box"><h2>ยอดรายรับ–รายจ่าย · ปีงบ '+esc(year)+'</h2><div class="grid">'+metric('รายรับ',money(cash.income))+metric('รายจ่าย',money(cash.expense))+metric('คงเหลือสุทธิ',money(cash.net))+'</div><p class="muted">ยอดเงินตามสมุดรายรับ–รายจ่าย '+esc(seasonPeriod(year))+'</p></section>';
+ let html='<section class="box"><h2>ยอดรายรับ–รายจ่าย · ปีงบ '+esc(year)+'</h2><div class="grid">'+metric('รายรับ',money(cash.income))+metric('รายจ่าย',money(cash.expense))+metric('คงเหลือสุทธิ',money(cash.net))+'</div><p class="muted">อัปเดตจากรายการที่บันทึกสำเร็จ · '+esc(seasonPeriod(year))+'</p></section>';
  if(account!=='cane')return html;
  const rows=forSeason('quota',year);
  const factories=['นครเพชร','ทิพย์',...new Set(rows.map(x=>x.factory||'ยังไม่ระบุ').filter(x=>!['นครเพชร','ทิพย์'].includes(x)))];
@@ -554,7 +554,7 @@ function receiptSummary(key,year=season()){
 }
 function receiptSummaryView(key){
  const s=receiptSummary(key),household=key==='household';
- const note=household?'รวมเฉพาะรายการในบัญชีครัวเรือนตามปีงบที่เลือก':'รวมเฉพาะสมุดรายรับ–รายจ่ายไร่อ้อยของปีงบที่เลือก ค่าแรงที่คำนวณไว้ ตั๋วอ้อย ยอดค้าง และประวัติชำระหนี้จะไม่ถูกรวมอัตโนมัติ หากมีการรับหรือจ่ายจริงให้ลงสมุดรายรับ–รายจ่ายหนึ่งครั้ง เพื่อไม่ให้นับเงินซ้ำ';
+ const note=household?'รวมเฉพาะรายการในบัญชีข้าวตามปีงบที่เลือก':'รวมเฉพาะสมุดรายรับ–รายจ่ายไร่อ้อยของปีงบที่เลือก ค่าแรงที่คำนวณไว้ ตั๋วอ้อย ยอดค้าง และประวัติชำระหนี้จะไม่ถูกรวมอัตโนมัติ หากมีการรับหรือจ่ายจริงให้ลงสมุดรายรับ–รายจ่ายหนึ่งครั้ง เพื่อไม่ให้นับเงินซ้ำ';
  return '<section class="box"><h2>สรุปรับ–จ่ายสุทธิ · '+(household?'ปี พ.ศ. ':'ปีงบ ')+esc(season())+'</h2><div class="grid">'+metric('รับมาแล้วตามสมุด',money(s.income))+metric('จ่ายไปแล้วตามสมุด',money(s.expense))+metric(s.net<0?'จ่ายมากกว่ารับ':'รับหักจ่ายสุทธิ',money(s.net))+'</div><p class="muted">'+note+' · '+s.count+' รายการ</p><p class="muted">ยอดสุทธิ = รายรับ − รายจ่าย ไม่รวมเงินยกมา จึงไม่ใช่ยอดเงินในบัญชีธนาคาร</p><details><summary>ดูสรุปรายเดือน</summary>'+quotaTable(['เดือน / พ.ศ.','รับ (บาท)','จ่าย (บาท)','สุทธิ (บาท)'],s.monthly)+'</details><p><button type="button" data-tab="'+(household?'household':'ledger')+'">ดูหรือเพิ่มรายการรับ–จ่าย</button></p></section>';
 }
 function householdOverview(){
@@ -623,7 +623,7 @@ function ensureMenus(data){
   for(const [id,name] of Object.entries(defaults))if(!data.menuSettings[scope].some(x=>x.id===id))data.menuSettings[scope].push({id,name,type:'feature',parent:'',hidden:false});
  }
 }
-function menuItems(){return (db.menuSettings[account]||[]).filter(item=>item.id!=='years');}
+function menuItems(){return (db.menuSettings[account]||[]).filter(item=>item.id!=='years').map(item=>account==='cane'&&item.id==='home'?{...item,name:'หน้าหลัก'}:item);}
 function canNest(items,id,parent){
  const visited=new Set([id]);let current=parent;
  while(current){if(visited.has(current))return false;visited.add(current);const row=items.find(x=>x.id===current);if(!row||row.type!=='folder')return false;current=row.parent;}
@@ -672,8 +672,8 @@ function render(){
  quotas:quotaGroupsView,
  quotaOwners:quotaGroupsView,
  householdHome:householdOverview,
- household:()=>list('household','บันทึกรายรับหรือรายจ่ายครัวเรือน','ยอดในหน้านี้ใช้สรุปบัญชีครัวเรือนตามปีงบ ต.ค.–ก.ย.',forSeason('household')),
- home:()=>'<div class="grid">'+metric('รายรับธุรกิจ',money(s.income))+metric('ต้นทุนรวมค่าแรง',money(s.expense))+metric('กำไรตามรายการที่บันทึก',money(s.profit))+metric('ยอดคงจ่ายคนงานและเจ้าของไร่',money(w+q))+'</div><div class="box"><h2>กำไรแยกแปลง</h2><p class="muted sub">ต้นทุนต่อไร่คำนวณจากต้นทุนที่ผูกกับแปลง ค่าเช่าในทะเบียนใช้เป็นข้อมูลอ้างอิง ให้บันทึกในรายจ่ายเมื่อต้องการนำมาคิดกำไร</p>'+plotAccountTables(false)+'</div><div class="box"><h2>ปิดปีงบ</h2><p>'+ (db.closed[season()]?'ปิดฤดูแล้ว':'เปิดให้บันทึกรายการ')+'</p><p class="muted">ค่าแรงคงจ่าย '+money(w)+' · เงินรับแทนที่คงจ่าย '+money(q)+'</p><button class="primary" data-close>'+ (db.closed[season()]?'เปิดปีงบอีกครั้ง':'ปิดปีงบและล็อกรายการ')+'</button></div>',
+ household:()=>list('household','บันทึกรายรับหรือรายจ่ายบัญชีข้าว','ยอดในหน้านี้ใช้สรุปบัญชีข้าวตามปีงบ ต.ค.–ก.ย.',forSeason('household')),
+ home:()=>'',
  years:fiveYearView,
  ledger:()=>list('ledger','บันทึกรายรับหรือรายจ่าย','ค่าแรงที่บันทึกในเมนูค่าแรงคิดเป็นต้นทุนแล้ว ให้ลงค่าใช้จ่ายอื่นที่หน้านี้',forSeason('ledger')),
  plots:()=>'<div class="box"><h2>ทะเบียนแปลงอ้อย</h2><p class="muted sub">ยอดรายรับและต้นทุนอ้างอิงปีงบที่เลือกและรายการที่ผูกกับแปลง</p>'+plotAccountTables(true)+'</div>'+editor('plots','เพิ่มแปลงอ้อย'),
@@ -685,7 +685,7 @@ function render(){
  history:historyView,
  backup:()=>'<div class="box"><h2>สำรองและย้ายข้อมูล</h2><p>ดาวน์โหลดข้อมูลทั้งสองบัญชีและทุกปีเป็นไฟล์ JSON เดียว หรือรวมรายการจากไฟล์ CSV ที่ดาวน์โหลดจากเว็บบัญชีอ้อยเดิม</p><div class="actions"><button data-export>ดาวน์โหลดสำรอง</button><label>เลือกไฟล์สำรอง<input id="import" type="file" accept=".json,.csv,application/json,text/csv"></label></div></div>'};
  const isOverview=['home','householdHome'].includes(tab);
- screen.innerHTML=isOverview?overviewPicker()+(overviewYears[account]?annualAccountSummary()+views[tab]()+(account==='cane'?historicalQuota():''):''):overviewPicker()+(tab==='menuManager'?menuManager():views[tab]?views[tab]():customMenuView());
+ screen.innerHTML=isOverview?overviewPicker()+(overviewYears[account]?annualAccountSummary()+views[tab]():''):overviewPicker()+(tab==='menuManager'?menuManager():views[tab]?views[tab]():customMenuView());
  const quotaForm=document.querySelector('[data-form=quota]');if(quotaForm)quotaPreview(quotaForm);
 }
 async function commit(next){
